@@ -1,0 +1,257 @@
+Service:
+  DeployType: ros
+  DeployMetadata:
+    SupplierDeployMetadata:
+      ArtifactRelation:
+        centos_7_9_x64_20G_alibase_20240403.vhd:
+          ArtifactId: ${Artifact.EcsImage.ArtifactId}
+          ArtifactVersion: draft
+      SupplierTemplateConfigs:
+        - Name: 单机版
+          Url: ros_templates/template.yaml
+          PredefinedParameters: []
+          AllowedRegions:
+            - ap-southeast-1
+    TemplateConfigs:
+      - Name: 单机版
+        Url: ros_templates/template.yaml
+        PredefinedParameters: []
+        AllowedRegions:
+          - ap-southeast-1
+    NetworkMetadata:
+      EnablePrivateVpcConnection: false
+      EnableReversePrivateVpcConnection: false
+    ServiceInstanceNameRule:
+      Prefix: Kong
+      UseDefaultValue: false
+  OperationMetadata:
+    SupportBackup: false
+    PrometheusConfigMap:
+      单机版:
+        EnablePrometheus: false
+  ServiceType: private
+  ServiceInfo:
+    Locale: zh-CN
+    ShortDescription: "Kong 是一个高性能、可扩展、云原生的 API 网关和微服务管理平台，广泛用于现代分布式系统中，作为流量入口、安全控制、服务治理和可观测性的核心组件。"
+    Image: resources/icons/service_logo.png
+    Name: Kong社区版
+  ShareType: Public
+  ApprovalType: Manual
+Artifact:
+  EcsImage:
+    ArtifactType: EcsImage
+    ArtifactName: Kong
+    Description: Kong
+    SupportRegionIds:
+        - ap-southeast-1
+    ArtifactBuildProperty:
+      CodeRepo:
+        Platform: github
+        Owner: LYH-RAIN
+        RepoName: aliyun-computenest/quickstart-LobeChat
+        Branch: main
+      RegionId: ap-southeast-1
+      CommandType: RunShellScript
+      CommandContent: |-
+        #!/bin/bash
+        # 升级基础组件：
+
+        # 安装docker-ce
+        yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+        yum makecache
+        yum install -y curl git docker-ce
+
+        sudo systemctl enable --now docker.socket
+        sudo systemctl enable --now docker.service
+
+        cd /root
+        # Get the code
+        git clone https://github.com/Kong/docker-kong.git
+
+        # Switch to your project directory
+        cd ./docker-kong/compose/
+
+        # Start the services (in detached mode)
+        docker compose up -d
+
+        set -euo pipefail  # 安全模式：出错即停、未定义变量报错、管道失败捕获
+
+        # ========================
+        # 1. 卸载 sshguard 相关组件
+        # ========================
+        echo ">>> 开始卸载 sshguard 组件..."
+
+        if command -v yum &> /dev/null; then
+            yum remove -y t-aliyun-security-sshguard t-aliyun-security-daemon t-aliyun-security-logtailer || true
+        elif command -v apt-get &> /dev/null; then
+            apt-get remove -y t-aliyun-security-sshguard t-aliyun-security-daemon t-aliyun-security-logtailer || true
+            apt-get autoremove -y || true
+        else
+            echo "警告：未识别包管理器，跳过卸载。"
+        fi
+
+        # 清理残留文件
+        rm -rf /opt/aliyun-security \
+               /usr/local/bin/sshguardctl \
+               /usr/local/bin/cloud-scra \
+               /run/aliyun-security--da
+
+        # 清理 PAM 配置
+        for pam_file in /etc/pam.d/sshd /etc/pam.d/common-auth; do
+            if [[ -f "$pam_file" ]]; then
+                sed -i '\#/usr/local/bin/sshguardctl#d' "$pam_file"
+            fi
+        done
+
+        # ========================
+        # 2. 账号与密码安全清理
+        # ========================
+        echo ">>> 开始清理用户账号与密码..."
+
+        exclude_users=("root" "admin")
+
+        # 锁定 root 和 admin 密码
+        sed -i 's/^\(root:\)[^:]*/\1!!/' /etc/shadow
+        sed -i 's/^\(admin:\)[^:]*/\1!!/' /etc/shadow
+
+        # 遍历所有用户，清理非排除用户
+        while IFS=: read -r username _ uid _ _ homedir user_shell; do
+            # 跳过系统用户（UID < 1000，除 root/admin）
+            if [[ $uid -lt 1000 ]] && [[ ! " ${exclude_users[*]} " =~ " $username " ]]; then
+                continue
+            fi
+
+            # 检查 shell 是否为交互式 shell
+            case "$user_shell" in
+                */bash|*/sh|*/zsh)
+                    if [[ ! " ${exclude_users[*]} " =~ " $username " ]]; then
+                        # 检查密码是否已锁定
+                        pass=$(grep "^${username}:" /etc/shadow | cut -d: -f2)
+                        if [[ "$pass" == "!" || "$pass" == "!!" || "$pass" == *\!* || "$pass" == "*" ]]; then
+                            echo "  -> 跳过已锁定用户: $username"
+                            continue
+                        fi
+
+                        echo "  -> 删除用户: $username"
+                        userdel -r "$username" 2>/dev/null || true
+                        if [[ -d "$homedir" ]]; then
+                            rm -rf "$homedir" 2>/dev/null || true
+                        fi
+                    fi
+                    ;;
+            esac
+        done < /etc/passwd
+
+        # 清理 .DEL 结尾目录
+        while IFS=: read -r _ _ _ _ _ homedir user_shell; do
+            case "$user_shell" in
+                */bash|*/sh|*/zsh)
+                    if [[ -d "$homedir" ]]; then
+                        find "$homedir" -maxdepth 1 -type d -name '*.DEL' -exec rm -rf {} + 2>/dev/null || true
+                    fi
+                    ;;
+            esac
+        done < /etc/passwd
+
+        # ========================
+        # 3. 日志与缓存清理
+        # ========================
+        echo ">>> 开始清理日志与缓存..."
+
+        # 清理系统日志
+        rm -rf /var/log/anaconda/* \
+               /var/log/ecsgo.log* \
+               /var/log/cron-* \
+               /var/log/btmp-* \
+               /var/log/maillog-* \
+               /var/log/messages-* \
+               /var/log/secure-* \
+               /var/log/spooler-* \
+               /var/log/yum.log-* \
+               /var/log/boot.log-* \
+               /var/log/sa/* \
+               /var/log/conman* \
+               /var/log/journal/* \
+               /var/log/cloud-init.log \
+               /var/log/cloud-init-output.log
+
+        # 清空剩余日志文件内容（避免 inode 占用）
+        find /var/log -type f -exec truncate -s 0 {} \; 2>/dev/null || true
+
+        # 清理包管理缓存
+        if command -v yum &> /dev/null; then
+            yum clean all
+        elif command -v dnf &> /dev/null; then
+            dnf clean all
+        elif command -v apt-get &> /dev/null; then
+            apt-get clean && apt-get autoclean && apt-get autoremove -y
+        elif command -v zypper &> /dev/null; then
+            zypper clean
+        fi
+
+        # 清理其他残留
+        rm -rf /var/lib/apt/lists/* \
+               /var/lib/yum/history/* \
+               /var/lib/dnf/history* \
+               /var/lib/dhclient/* \
+               /var/lib/dhcp/* \
+               /var/lib/aliyun_init/* \
+               /var/lib/cloud/* \
+               /tmp/* \
+               /etc/ssh/sshd_config.d/*
+
+        # 清理阿里云辅助日志
+        if [[ -d /usr/local/share/aliyun-assist/ ]]; then
+            find /usr/local/share/aliyun-assist/ -name "log" -type d -exec rm -rf {} + 2>/dev/null || true
+        fi
+
+        # ========================
+        # 4. 安全加固
+        # ========================
+        echo ">>> 开始安全加固..."
+
+        # 禁用非必要服务
+        systemctl disable --now firewalld update-motd.service systemd-resolved.service rpcbind.service rpcbind.socket 2>/dev/null || true
+
+        # 重置 SSH 配置
+        sed -i '/PasswordAuthentication/d' /etc/ssh/sshd_config
+        echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config
+        rm -f /etc/ssh/ssh_host_*
+
+        # 锁定 root 密码（双重保险）
+        passwd -l root 2>/dev/null || true
+        sed -i 's/^root:[^:]*/root:*:/' /etc/shadow
+
+        # 清理 SSH 授权密钥
+        rm -f /root/.ssh/* 2>/dev/null || true
+
+        # ========================
+        # 5. 历史记录与临时文件清理
+        # ========================
+        echo ">>> 清理命令历史与临时文件..."
+
+        # 清空所有用户的 bash_history
+        for user_home in /home/* /root; do
+            if [[ -d "$user_home" ]]; then
+                history_file="$user_home/.bash_history"
+                if [[ -f "$history_file" ]]; then
+                    > "$history_file"
+                fi
+                # 清理其他敏感文件
+                rm -f "$user_home"/.{viminfo,bashrc,bash_profile,profile} 2>/dev/null || true
+            fi
+        done
+
+        # 清理 hosts 中的云厂商标识
+        sed -i '/iZ.*Z/d; /AliYun\|Aliyun\|debug/d' /etc/hosts
+
+        # 同步磁盘
+        sync; sync; sync
+
+        # ========================
+        # 6. 自删除（最后一步）
+        # ========================
+        echo ">>> 清理完成，删除脚本自身..."
+        rm -- "$0" 2>/dev/null || true
+
+        echo "✅ 系统清理与安全加固已完成！"
