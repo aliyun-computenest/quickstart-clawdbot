@@ -18,6 +18,10 @@ Conditions:
     Fn::Equals:
       - true
       - Ref: EnablePublicIp
+  CreateDingTalkConditions:
+    Fn::Equals:
+      - true
+      - Ref: CreateDingTalk
 Parameters:
   VpcOption:
     Type: String
@@ -143,6 +147,7 @@ Parameters:
         InstanceTypeFamily:
           - ecs.u1
           - ecs.e
+          - ecs.u2a
   InstancePassword:
     NoEcho: true
     Type: String
@@ -219,6 +224,55 @@ Parameters:
       zh-cn: 百炼 API-KEY
       en: BaiLian API-KEY
     AssociationProperty: ALIYUN::Bailian::ApiKey::ApiKeyInfo
+  CreateDingTalk:
+    Type: Boolean
+    Label:
+      en: Whether to create DingTalk resources
+      zh-cn: 是否创建钉钉资源
+    Default: false
+  DingTalkTemplateId:
+    Type: String
+    Label:
+      en: DingTalk Template ID
+      zh-cn: 钉钉模版 ID
+    Description:
+      en: >-
+        Visit the DingTalk Card Platform page to view the template ID.
+      zh-cn: >-
+        访问<a href="https://open-dev.dingtalk.com/fe/card?hash=%23%2F#/" target="_blank">钉钉的卡片平台</a>页面，
+        查看模板 ID。
+    Default: ''
+  DingTalkClientId:
+    Type: String
+    Label:
+      en: DingTalk Client ID
+      zh-cn: 钉钉 Client ID
+    Description:
+      en: >-
+        Visit the application management page of DingTalk Open Platform.
+        After selecting a specific application, select Credentials and Basic Information
+        in the left menu to view the Client ID.
+      zh-cn: >-
+        访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
+        target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
+        font-weight: bold;">凭证与基础信息</span> 查看 Client ID。
+    Default: ''
+  DingTalkClientSecret:
+    Type: String
+    NoEcho: true
+    Label:
+      en: DingTalk Client Secret
+      zh-cn: 钉钉 Client Secret
+    Description:
+      en: >-
+        Visit the application management page of DingTalk Open Platform.
+        After selecting a specific application, select Credentials and Basic Information
+        in the left menu to view the Client Secret.
+      zh-cn: >-
+        访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
+        target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
+        font-weight: bold;">凭证与基础信息</span> 查看 Client Secret。
+    Default: ''
 Resources:
   # 新建vpc
   EcsVpc:
@@ -315,9 +369,21 @@ Resources:
         Fn::Sub:
           - |
             #!/bin/bash
+            CONFIG_FILE="/root/.clawdbot/clawdbot.json"
+            yum install -y jq > /dev/null 2>&1
+
             TOKEN=$(openssl rand -hex 16 | sed 's/\(..\)/\1-/g; s/-$//')
             sed -i "s/\${!BAILIAN_API_KEY}/${ApiKey}/g" /root/.clawdbot/clawdbot.json
             sed -i "s/\${!TOKEN}/$TOKEN/g" /root/.clawdbot/clawdbot.json
+
+            jq '.gateway.http = {
+              "endpoints": {
+                "responses": {
+                  "enabled": true
+                }
+              }
+            }' "/root/.clawdbot/clawdbot.json" > "/root/.clawdbot/clawdbot.json.tmp" && mv "/root/.clawdbot/clawdbot.json.tmp" "/root/.clawdbot/clawdbot.json" -f
+
 
             cd /root/clawdbot
             export XDG_RUNTIME_DIR="/run/user/$(id -u)"
@@ -330,6 +396,65 @@ Resources:
               Fn::Select:
                 - ApiKeyValue
                 - Ref: BaiLianApiKey
+
+  AuthConfigForDingTalk:
+    Type: ALIYUN::AppFlow::UserAuthConfig
+    DependsOn: RunInstallCommand
+    Condition: CreateDingTalkConditions
+    Properties:
+      ConnectorId: 'connector-6b8df2297dca4a5f8f15'
+      AuthConfigName:
+        Fn::Sub: 'dingtalk-app-${ALIYUN::StackId}'
+      AuthConfig:
+        clientID:
+          Ref: DingTalkClientId
+        clientSecret:
+          Ref: DingTalkClientSecret
+  AuthConfigForClawdBot:
+    Type: ALIYUN::AppFlow::UserAuthConfig
+    DependsOn: RunInstallCommand
+    Condition: CreateDingTalkConditions
+    Properties:
+      ConnectorId: 'connector-ab8b2a61351f4139a574'
+      AuthConfigName:
+        Fn::Sub: 'clawdbot-${ALIYUN::StackId}'
+      AuthConfig:
+        regionId:
+          Ref: ALIYUN::Region
+        instanceId:
+          Fn::Select:
+            - 0
+            - Fn::GetAtt:
+              - InstanceGroup
+              - InstanceIds
+        port: 18789
+        token:
+            Fn::Base64Decode:
+              Fn::GetJsonValue:
+                - Output
+                - Fn::Select:
+                    - 0
+                    - Fn::GetAtt:
+                        - RunInstallCommand
+                        - InvokeResults
+                    - {"Output":"cGxhY2Vob2xkZXI="}
+  Flow:
+    Type: ALIYUN::AppFlow::Flow
+    Condition: CreateDingTalkConditions
+    Properties:
+      FlowName: '钉钉调用ClawdBot'
+      FlowDesc: '在钉钉中操作您的ClawdBot'
+      TemplateId: 'tl-93430175e1a346ca8836'
+      LaunchFlow: true
+      From: computenest_clawdbot
+      FlowStatus: Enable
+      Parameters:
+        templateId:
+          Ref: DingTalkTemplateId
+        dingdingAuthId:
+          Ref: AuthConfigForDingTalk
+        clawdBotAuthId:
+          Ref: AuthConfigForClawdBot
 Outputs:
   Clawdbot Addresses:
     Description:
@@ -360,6 +485,18 @@ Outputs:
                     - Fn::GetAtt:
                         - RunInstallCommand
                         - InvokeResults
+  Console@WebhookUrl:
+    Condition: CreateDingTalkConditions
+    Description:
+      zh-cn: 消息接收地址。
+      en: Message receiving address.
+    Label:
+      zh-cn: Webhook Url
+      en: Webhook Url
+    Value:
+      Fn::GetAtt:
+        - Flow
+        - WebhookAddress
   # Clawdbot Private Addresses:
   #   Condition: EnablePublicIpConditions
   #   Description:
@@ -413,4 +550,62 @@ Metadata:
           - VSwitchCidrBlock
         Label:
           default: 可用区配置
-
+      - Parameters:
+          - EnableDingTalk
+          - DingTalkTemplateId
+          - DingTalkClientId
+          - DingTalkClientSecret
+        Label:
+          default: 钉钉机器人配置
+    QuickDeployConfig:
+      PackageFields:
+        - Key: EcsInstanceType
+        - Key: SystemDiskCategory
+          Label:
+            zh-cn: 系统盘
+            en: System Disk
+          Value: 'ESSD Entry云盘 / 40 GB'
+        - Key: InternetChargeType
+          Label:
+            zh-cn: 公网带宽
+            en: Internet Charge Type
+          Value: '3 Mbps峰值带宽'
+        - Key: PayType
+          Label:
+            zh-cn: 付费类型
+            en: Pay Type
+          Value: '${PayType}'
+      PredefinedParameters:
+        - Name: 入门版
+          Parameters:
+            EcsInstanceType: ecs.u2a-c1m1.large
+            PayType: PostPaid
+          OrderList:
+            - EcsInstanceType
+            - PayType
+          Type: Normal
+          Description: '适用于 Telegram/WhatsApp 消息转发与简单问答。<br>可用学生专属算力包及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o#student-300coupon" target="_blank">立即前往</a>'
+          # DefaultRegion: cn-hangzhou
+        - Name: 极客版
+          Parameters:
+            EcsInstanceType: ecs.u2a-c1m2.xlarge
+            PayType: PostPaid
+          OrderList:
+            - EcsInstanceType
+            - PayType
+          Type: Normal
+          Description: '适用于浏览器自动化、多技能运行、长对话记录或高频自动化任务。<br>可用学生专属算力包及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eOHLRRp" target="_blank">立即前往</a>'
+          # DefaultRegion: us-east-1
+        - Name: 自定义套餐
+          Parameters: {}
+          OrderList:
+            - EcsInstanceType
+            - PayType
+          Type: Custom
+      CustomFields:
+        - Key: InstancePassword
+        - Key: BaiLianApiKey
+      CostRelatedKeys:
+        - RegionId
+      AutomaticZone:
+        ZoneIdKey: ZoneId
