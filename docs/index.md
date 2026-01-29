@@ -54,8 +54,8 @@ Clawdbot 是一个现代化的机器人流程自动化（RPA）平台。Clawdbot
    <div style="max-width: 600px;"><img src="9.png" style="max-width:100%;height:auto;" /></div>
 
 #### 5. 创建钉钉机器人连接流
-1. 在服务部署页面，打开是否创建钉钉资源选项，填写上述获取的钉钉消息卡片模版ID、ClientID和Client Secret
-   <div style="max-width: 600px;"><img src="10.png" style="max-width:100%;height:auto;" /></div>
+1. 在服务部署页面，启用钉钉应用连接Moltbot，填写上述获取的钉钉消息卡片模版ID、ClientID和Client Secret
+   <div style="max-width: 600px;"><img src="10.jpg" style="max-width:100%;height:auto;" /></div>
 2. 等待部署完成后进入服务实例详情页。在页面上可以获取到**Webhook Url**，复制并保存
    <div style="max-width: 600px;"><img src="11.png" style="max-width:100%;height:auto;" /></div>
 
@@ -66,21 +66,24 @@ Clawdbot 是一个现代化的机器人流程自动化（RPA）平台。Clawdbot
 在添加应用能力页面，找到机器人卡片，点击添加。
 
 2. 在机器人配置页面，打开机器人配置开关，您可以参考下图完成配置。
-<div style="max-width: 600px;"><img src="12.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="12.png" style="max-width:100%;height:auto;" /></div>
 
 3. 消息接收模式请选择**HTTP模式**，消息接收地址为刚刚的 WebhookUrl。然后点击发布。
-<div style="max-width: 600px;"><img src="13.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="13.png" style="max-width:100%;height:auto;" /></div>
 
 #### 7. 发布钉钉应用
 应用创建完成后，如果需要将应用供企业内其他用户使用，需要发布一个版本。
 1. 点击应用开发，在钉钉应用页面，点击目标应用。
-<div style="max-width: 600px;"><img src="14.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="14.png" style="max-width:100%;height:auto;" /></div>
 2. 在目标应用开发导航栏，点击版本管理与发布，在版本管理与发布页面，点击创建新版本。进入版本详情页面，输入应用版本号和版本描述信息，选择合适的应用可见范围，完成后点击保存。并在弹窗中点击直接发布。
-<div style="max-width: 600px;"><img src="15.png" style="max-width:100%;height:auto;" /></div>
-<div style="max-width: 600px;"><img src="16.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="15.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="16.png" style="max-width:100%;height:auto;" /></div>
 3. 测试机器人
 你可以创建群聊或在已有群聊中添加机器人，并与机器人对话，查看效果。
-<div style="max-width: 600px;"><img src="17.png" style="max-width:100%;height:auto;" /></div><div style="max-width: 600px;"><img src="18.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="17.png" style="max-width:100%;height:auto;" />
+   </div><div style="max-width: 600px;"><img src="18.png" style="max-width:100%;height:auto;" /></div>
 在钉钉群中@机器人或直接进行私聊，进行交流互动。
-<div style="max-width: 600px;"><img src="19.png" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 600px;"><img src="19.png" style="max-width:100%;height:auto;" /></div>
+
+## 如何使用Clawdbot
 更多用法请参考Clawdbot[官网文档](https://docs.clawd.bot/)。
