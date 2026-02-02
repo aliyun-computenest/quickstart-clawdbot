@@ -105,6 +105,8 @@ Parameters:
       - Year
     AssociationProperty: PayPeriodUnit
     AssociationPropertyMetadata:
+      ValueLabelMapping:
+        Month: 月
       Visible:
         Condition:
           Fn::Not:
@@ -148,6 +150,12 @@ Parameters:
           - ecs.u1
           - ecs.e
           - ecs.u2a
+    AllowedValues:
+      - ecs.e-c1m1.large
+      - ecs.e-c1m2.large
+      - ecs.e-c1m1.xlarge
+      - ecs.e-c1m2.xlarge
+      - ecs.u2a-c1m2.xlarge
   InstancePassword:
     NoEcho: true
     Type: String
@@ -164,6 +172,19 @@ Parameters:
     MinLength: 8
     MaxLength: 30
     AssociationProperty: ALIYUN::ECS::Instance::Password
+  InternetChargeType:
+    Type: String
+    Label:
+      zh-cn: 带宽付费类型
+      en: Internet Charge Type
+    AssociationPropertyMetadata:
+      ValueLabelMapping:
+        PayByTraffic: 按流量计费
+        PayByBandwidth: 按固定带宽计费
+    AllowedValues:
+      - PayByBandwidth
+      - PayByTraffic
+    Default: PayByTraffic
   EnablePublicIp:
     Type: Boolean
     Label:
@@ -227,8 +248,8 @@ Parameters:
   CreateDingTalk:
     Type: Boolean
     Label:
-      en: Whether to create DingTalk resources
-      zh-cn: 是否创建钉钉资源
+      en: Enable DingTalk application link Moltbot
+      zh-cn: 启用钉钉应用连接Moltbot
     Default: false
   DingTalkTemplateId:
     Type: String
@@ -241,6 +262,12 @@ Parameters:
       zh-cn: >-
         访问<a href="https://open-dev.dingtalk.com/fe/card?hash=%23%2F#/" target="_blank">钉钉的卡片平台</a>页面，
         查看模板 ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${CreateDingTalk}
     Default: ''
   DingTalkClientId:
     Type: String
@@ -256,6 +283,12 @@ Parameters:
         访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
         target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
         font-weight: bold;">凭证与基础信息</span> 查看 Client ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${CreateDingTalk}
     Default: ''
   DingTalkClientSecret:
     Type: String
@@ -272,6 +305,12 @@ Parameters:
         访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
         target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
         font-weight: bold;">凭证与基础信息</span> 查看 Client Secret。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${CreateDingTalk}
     Default: ''
 Resources:
   # 新建vpc
@@ -346,15 +385,17 @@ Resources:
         Ref: InstancePassword
       InstanceType:
         Ref: EcsInstanceType
-      SystemDiskCategory: cloud_essd
+      SystemDiskCategory: cloud_essd_entry
       SystemDiskSize: 40
       InternetMaxBandwidthOut:
         Fn::If:
           - EnablePublicIpConditions
-          - 5
+          - 3
           - 0
       IoOptimized: optimized
       MaxAmount: 1
+      InternetChargeType:
+        Ref: InternetChargeType
   RunInstallCommand:
     Type: ALIYUN::ECS::RunCommand
     Properties:
@@ -368,28 +409,62 @@ Resources:
       CommandContent:
         Fn::Sub:
           - |
+            # #!/bin/bash
+            # CONFIG_FILE="/root/.clawdbot/clawdbot.json"
+            # yum install -y jq > /dev/null 2>&1
+
+            # TOKEN=$(openssl rand -hex 16 | sed 's/\(..\)/\1-/g; s/-$//')
+            # sed -i "s/\${!BAILIAN_API_KEY}/${ApiKey}/g" /root/.clawdbot/clawdbot.json
+            # sed -i "s/\${!TOKEN}/$TOKEN/g" /root/.clawdbot/clawdbot.json
+
+            # jq '.gateway.http = {
+            #   "endpoints": {
+            #     "responses": {
+            #       "enabled": true
+            #     }
+            #   }
+            # }' "/root/.clawdbot/clawdbot.json" > "/root/.clawdbot/clawdbot.json.tmp" && mv "/root/.clawdbot/clawdbot.json.tmp" "/root/.clawdbot/clawdbot.json" -f
+
+
+            # cd /root/clawdbot
+            # export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            # export DBUS_SESSION_BUS_ADDRESS="unix:path=${!XDG_RUNTIME_DIR}/bus"
+            # systemctl --user restart clawdbot-gateway
+
+            # echo $TOKEN
+
             #!/bin/bash
+
+            # 配置变量
+            NEW_API_KEY="${ApiKey}"
             CONFIG_FILE="/root/.clawdbot/clawdbot.json"
-            yum install -y jq > /dev/null 2>&1
+            AUTH_CONFIG_FILE="/root/.clawdbot/agents/main/agent/auth-profiles.json"
 
-            TOKEN=$(openssl rand -hex 16 | sed 's/\(..\)/\1-/g; s/-$//')
-            sed -i "s/\${!BAILIAN_API_KEY}/${ApiKey}/g" /root/.clawdbot/clawdbot.json
-            sed -i "s/\${!TOKEN}/$TOKEN/g" /root/.clawdbot/clawdbot.json
+            # 1. 安装 jq（如果未安装），静默模式
+            if ! command -v jq &> /dev/null; then
+                yum install -y jq > /dev/null 2>&1
+            fi
 
-            jq '.gateway.http = {
-              "endpoints": {
-                "responses": {
-                  "enabled": true
-                }
-              }
-            }' "/root/.clawdbot/clawdbot.json" > "/root/.clawdbot/clawdbot.json.tmp" && mv "/root/.clawdbot/clawdbot.json.tmp" "/root/.clawdbot/clawdbot.json" -f
+            # 2. 检查并更新 clawdbot.json 中的 token（仅当为空或为 "$token" 时）
+            CURRENT_TOKEN=$(jq -r '.gateway.auth.token // empty' "$CONFIG_FILE" 2>/dev/null || true)
 
+            if [ -z "$CURRENT_TOKEN" ] || [ "$CURRENT_TOKEN" = "\$token" ]; then
+                NEW_TOKEN=$(openssl rand -hex 16)
+                jq --arg token "$NEW_TOKEN" \
+                  '.gateway.auth.token = $token' \
+                  "$CONFIG_FILE" > "${!CONFIG_FILE}.tmp" && \
+                mv "${!CONFIG_FILE}.tmp" "$CONFIG_FILE"
+            fi
 
-            cd /root/clawdbot
-            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-            export DBUS_SESSION_BUS_ADDRESS="unix:path=${!XDG_RUNTIME_DIR}/bus"
-            systemctl --user restart clawdbot-gateway
+            # 3. 更新 auth-profiles.json 中的 API Key（仅当 NEW_API_KEY 非空）
+            if [ -n "$NEW_API_KEY" ]; then
+                jq --arg newkey "$NEW_API_KEY" \
+                  '.profiles."alibaba-cloud:default".key = $newkey' \
+                  "$AUTH_CONFIG_FILE" > "${!AUTH_CONFIG_FILE}.tmp" && \
+                mv "${!AUTH_CONFIG_FILE}.tmp" "$AUTH_CONFIG_FILE"
+            fi
 
+            TOKEN=$(sed -z 's/.*\"token": *\"\([^\"]*\)\".*/\1/' /root/.clawdbot/clawdbot.json | tr -d '\0')
             echo $TOKEN
 
           - ApiKey:
@@ -415,6 +490,7 @@ Resources:
     DependsOn: RunInstallCommand
     Condition: CreateDingTalkConditions
     Properties:
+      CheckRole: true
       ConnectorId: 'connector-ab8b2a61351f4139a574'
       AuthConfigName:
         Fn::Sub: 'clawdbot-${ALIYUN::StackId}'
@@ -525,6 +601,7 @@ Metadata:
   ALIYUN::ROS::Interface:
     Hidden:
       - EnablePublicIp
+      - InternetChargeType
     ParameterGroups:
       - Parameters:
           - PayType
@@ -539,6 +616,10 @@ Metadata:
           default: 资源配置
       - Parameters:
           - BaiLianApiKey
+          - CreateDingTalk
+          - DingTalkTemplateId
+          - DingTalkClientId
+          - DingTalkClientSecret
         Label:
           default: 服务配置
       - Parameters:
@@ -550,13 +631,6 @@ Metadata:
           - VSwitchCidrBlock
         Label:
           default: 可用区配置
-      - Parameters:
-          - EnableDingTalk
-          - DingTalkTemplateId
-          - DingTalkClientId
-          - DingTalkClientSecret
-        Label:
-          default: 钉钉机器人配置
     QuickDeployConfig:
       PackageFields:
         - Key: EcsInstanceType
@@ -575,37 +649,54 @@ Metadata:
             zh-cn: 付费类型
             en: Pay Type
           Value: '${PayType}'
+        - Key: PayPeriodUnit
+          Label:
+            zh-cn: 付费时长
+            en: Pay Period
+          Value: '${PayPeriod} ${PayPeriodUnit}'
       PredefinedParameters:
-        - Name: 入门版
+        - Name: 热卖套餐，长期使用首选！
           Parameters:
-            EcsInstanceType: ecs.u2a-c1m1.large
-            PayType: PostPaid
+            EcsInstanceType: ecs.e-c1m1.large
+            PayPeriodUnit: Month
+            PayPeriod: 1
+            PayType: PrePaid
+            InternetChargeType: PayByTraffic
           OrderList:
             - EcsInstanceType
+            - PayPeriodUnit
+            - PayPeriod
             - PayType
+            - InternetChargeType
           Type: Normal
-          Description: '适用于 Telegram/WhatsApp 消息转发与简单问答。<br>可用学生专属算力包及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o#student-300coupon" target="_blank">立即前往</a>'
-          # DefaultRegion: cn-hangzhou
-        - Name: 极客版
+          Description: 固定带宽不限流量，超值性价比!
+        - Name: 尝鲜套餐，只需0.3元/小时
           Parameters:
-            EcsInstanceType: ecs.u2a-c1m2.xlarge
+            EcsInstanceType: ecs.e-c1m2.large
+            PayPeriodUnit: Month
+            PayPeriod: 1
             PayType: PostPaid
+            InternetChargeType: PayByTraffic
           OrderList:
             - EcsInstanceType
+            - PayPeriodUnit
+            - PayPeriod
             - PayType
+            - InternetChargeType
           Type: Normal
-          Description: '适用于浏览器自动化、多技能运行、长对话记录或高频自动化任务。<br>可用学生专属算力包及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eOHLRRp" target="_blank">立即前往</a>'
-          # DefaultRegion: us-east-1
+          Description: 弗吉尼亚，北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o#student-300coupon" target="_blank">立即领取</a>
         - Name: 自定义套餐
           Parameters: {}
           OrderList:
             - EcsInstanceType
+            - PayPeriodUnit
+            - PayPeriod
             - PayType
           Type: Custom
       CustomFields:
         - Key: InstancePassword
-        - Key: BaiLianApiKey
       CostRelatedKeys:
         - RegionId
+        - PayPeriod
       AutomaticZone:
         ZoneIdKey: ZoneId
