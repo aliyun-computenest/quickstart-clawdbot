@@ -267,24 +267,6 @@ Parameters:
       en: Enable DingTalk application link Moltbot
       zh-cn: 启用钉钉应用连接 Moltbot
     Default: false
-  DingTalkTemplateId:
-    Type: String
-    Label:
-      en: DingTalk Template ID
-      zh-cn: 钉钉模版 ID
-    Description:
-      en: >-
-        Visit the DingTalk Card Platform page to view the template ID.
-      zh-cn: >-
-        访问<a href="https://open-dev.dingtalk.com/fe/card?hash=%23%2F#/" target="_blank">钉钉的卡片平台</a>页面，
-        查看模板 ID。
-    AssociationPropertyMetadata:
-      Visible:
-        Condition:
-          Fn::Equals:
-            - true
-            - ${CreateDingTalk}
-    Default: ''
   DingTalkClientId:
     Type: String
     Label:
@@ -472,66 +454,32 @@ Resources:
               Fn::Select:
                 - ApiKeyValue
                 - Ref: BaiLianApiKey
-  AuthConfigForDingTalk:
-    Type: ALIYUN::AppFlow::UserAuthConfig
-    DependsOn: RunInstallCommand
+  EnableDingtalkRobotByRunCommand:
+    Type: ALIYUN::ECS::RunCommand
     Condition: CreateDingTalkConditions
     Properties:
-      ConnectorId: 'connector-6b8df2297dca4a5f8f15'
-      AuthConfigName:
-        Fn::Sub: 'dingtalk-app-${ALIYUN::StackId}'
-      AuthConfig:
-        clientID:
-          Ref: DingTalkClientId
-        clientSecret:
-          Ref: DingTalkClientSecret
-  AuthConfigForClawdBot:
-    Type: ALIYUN::AppFlow::UserAuthConfig
-    DependsOn: RunInstallCommand
-    Condition: CreateDingTalkConditions
-    Properties:
-      CheckRole: true
-      ConnectorId: 'connector-ab8b2a61351f4139a574'
-      AuthConfigName:
-        Fn::Sub: 'clawdbot-${ALIYUN::StackId}'
-      AuthConfig:
-        regionId:
-          Ref: ALIYUN::Region
-        instanceId:
-          Fn::Select:
-            - 0
-            - Fn::GetAtt:
-              - InstanceGroup
-              - InstanceIds
-        port: 18789
-        token:
-            Fn::Base64Decode:
-              Fn::GetJsonValue:
-                - Output
-                - Fn::Select:
-                    - 0
-                    - Fn::GetAtt:
-                        - RunInstallCommand
-                        - InvokeResults
-                    - {"Output":"cGxhY2Vob2xkZXI="}
-  Flow:
-    Type: ALIYUN::AppFlow::Flow
-    Condition: CreateDingTalkConditions
-    Properties:
-      FlowName: '钉钉调用ClawdBot'
-      FlowDesc: '在钉钉中操作您的ClawdBot'
-      TemplateId: 'tl-93430175e1a346ca8836'
-      LaunchFlow: true
-      From: computenest_clawdbot
-      FlowStatus: Enable
-      Parameters:
-        templateId:
-          Ref: DingTalkTemplateId
-        dingdingAuthId:
-          Ref: AuthConfigForDingTalk
-        clawdBotAuthId:
-          Ref: AuthConfigForClawdBot
-  EnableEnterpriseWeChatRobot:
+      InstanceIds:
+        Fn::GetAtt:
+        - InstanceGroup
+        - InstanceIds
+      Type: RunShellScript
+      Sync: true
+      Timeout: 3600
+      CommandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            APP_ID=${DingTalkClientId}
+            APP_SECRET=${DingTalkClientSecret}
+            sh /opt/.swas/run-cmd.sh set-channel dingtalk "${!APP_ID}" "${!APP_SECRET}" > /dev/null
+            sh /opt/.swas/run-cmd.sh restart
+            echo "OpenClaw配置成功."
+
+          - DingTalkClientId:
+              Ref: DingTalkClientId
+            DingTalkClientSecret:
+              Ref: DingTalkClientSecret
+  EnableEnterpriseWeChatRobotByRunCommand:
     Type: ALIYUN::ECS::RunCommand
     Condition: EnableEnterpriseWeChatRobotConditions
     Properties:

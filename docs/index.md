@@ -20,72 +20,63 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
 
 # 📚 使用指南
 
-## 如何配置钉钉机器人使用
-### 创建钉钉应用
-创建钉钉应用需要您的钉钉账号有开发者权限。您可以联系您的组织管理员获取钉钉开放平台的开发权限，具体操作请参见获取开发者权限。
+## 配置钉钉机器人
 
-#### 1. 创建应用
-1. 访问钉钉开放平台，点击创建。如果创建过应用但未展示应用开发指引，点击立即开始进入钉钉应用页面。
-2. 在应用开发的左侧导航栏中，点击钉钉应用，在钉钉应用页面右上角点击创建应用。
-   <div style="max-width: 600px;"><img src="4.png" style="max-width:100%;height:auto;" /></div>
-3. 在创建应用面板，填写应用名称和应用描述，上传应用图标，完成后点击保存。
+### 1. 创建钉钉应用
 
-#### 2. 查看应用 Client ID 和 Client Secret
-在左侧菜单选择凭证与基础信息，复制 Client ID 和 Client Secret，用于在计算巢创建服务时填写。
-   <div style="max-width: 600px;"><img src="5.png" style="max-width:100%;height:auto;" /></div>
+创建钉钉应用需要钉钉账号有开发者权限。可以联系组织管理员获取钉钉开放平台的开发权限，具体操作请参见[获取开发者权限](https://open.dingtalk.com/document/orgapp/obtain-developer-permissions)。
 
-#### 3. 创建消息卡片
-钉钉机器人通过卡片消息支持流式返回结果，您需要创建卡片模板供消息发送使用。
-1. 访问[卡片平台](https://open-dev.dingtalk.com/fe/card)，点击新建模板。
-   <div style="max-width: 600px;"><img src="6.png" style="max-width:100%;height:auto;" /></div>
-2. 在创建模板输入框，填入模板信息，单击创建。
-   * 卡片类型：消息卡片
-   * 卡片模板场景：AI 卡片
-   * 关联应用：您在之前步骤创建的钉钉应用
-3. 在模拟编辑页面，不要使用预设模板，不需要进行任何额外操作，直接保存并发布模板。然后点击返回模板列表页面。
-   <div style="max-width: 600px;"><img src="7.png" style="max-width:100%;height:auto;" /></div>
-4. 复制模板ID，用于创建计算巢服务使用。
-   <div style="max-width: 600px;"><img src="8.png" style="max-width:100%;height:auto;" /></div>
+#### 1.1 创建应用
 
-#### 4. 授予应用发送卡片消息权限
-创建卡片后，您需要给应用授予发送卡片消息的权限。
-1. 访问[钉钉应用列表](https://open-dev.dingtalk.com/fe/app)。找到刚刚创建的应用，点击应用名称进入详情页面。
-2. 在左侧菜单选择开发配置 > 权限管理，在左侧搜索框分别输入**Card.Streaming.Write** 和**Card.Instance.Write**，并在操作列点击申请权限。
-   <div style="max-width: 600px;"><img src="9.png" style="max-width:100%;height:auto;" /></div>
+1. 访问[钉钉开放平台](https://open-dev.dingtalk.com/)，点击**创建**。如果创建过应用但未展示应用开发指引，点击**立即开始**进入钉钉应用页面。
 
-#### 5. 创建钉钉机器人连接流
-1. 在服务部署页面，启用钉钉应用连接Moltbot，填写上述获取的钉钉消息卡片模版ID、ClientID和Client Secret
-   <div style="max-width: 600px;"><img src="10.jpg" style="max-width:100%;height:auto;" /></div>
-2. 等待部署完成后进入服务实例详情页。在页面上可以获取到**Webhook Url**，复制并保存
-   <div style="max-width: 600px;"><img src="11.png" style="max-width:100%;height:auto;" /></div>
+2. 在应用开发的左侧导航栏中，点击**钉钉应用**，在**钉钉应用**页面右上角点击**创建应用**。
+   <div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/8888359671/p1049576.png" style="max-width:100%;height:auto;" /></div>
 
-#### 6. 配置钉钉机器人
-有了Webhook地址后，接下来您可以在钉钉应用中配置机器人来回答用户问题了。
+3. 在**创建应用**面板，填写**应用名称**和**应用描述**，在**应用图标**上传图标，完成后点击**保存**。
+
+#### 1.2 查看应用 Client ID 和 Client Secret
+
+在左侧菜单选择**凭证与基础信息**，复制 **Client ID** 和 **Client Secret**。
+   <div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/8888359671/p1049599.png" style="max-width:100%;height:auto;" /></div>
+
+### 2. 配置钉钉机器人
+
+#### 2.1 配置钉钉机器人
 
 1. 访问[钉钉应用列表](https://open-dev.dingtalk.com/fe/app)。找到刚刚创建的应用，点击应用名称进入详情页面。
-在添加应用能力页面，找到机器人卡片，点击添加。
 
-2. 在机器人配置页面，打开机器人配置开关，您可以参考下图完成配置。
-   <div style="max-width: 600px;"><img src="12.png" style="max-width:100%;height:auto;" /></div>
+2. 在**添加应用能力**页面，找到机器人卡片，点击**添加**。
 
-3. 消息接收模式请选择**HTTP模式**，消息接收地址为刚刚的 WebhookUrl。然后点击发布。
-   <div style="max-width: 600px;"><img src="13.png" style="max-width:100%;height:auto;" /></div>
+   在机器人配置页面，打开**机器人配置**开关，可以参考下图完成配置。**消息接收模式**请选择 **Stream 模式**，然后单击**发布**。
+   <div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/5359430771/p1053050.png" style="max-width:100%;height:auto;" /></div>
 
-#### 7. 发布钉钉应用
+#### 3.2 发布应用版本
+
 应用创建完成后，如果需要将应用供企业内其他用户使用，需要发布一个版本。
-1. 点击应用开发，在钉钉应用页面，点击目标应用。
-   <div style="max-width: 600px;"><img src="14.png" style="max-width:100%;height:auto;" /></div>
-2. 在目标应用开发导航栏，点击版本管理与发布，在版本管理与发布页面，点击创建新版本。进入版本详情页面，输入应用版本号和版本描述信息，选择合适的应用可见范围，完成后点击保存。并在弹窗中点击直接发布。
-   <div style="max-width: 600px;"><img src="15.png" style="max-width:100%;height:auto;" /></div>
-   <div style="max-width: 600px;"><img src="16.png" style="max-width:100%;height:auto;" /></div>
-3. 测试机器人
-你可以创建群聊或在已有群聊中添加机器人，并与机器人对话，查看效果。
-   <div style="max-width: 600px;"><img src="17.png" style="max-width:100%;height:auto;" />
-   </div><div style="max-width: 600px;"><img src="18.png" style="max-width:100%;height:auto;" /></div>
-在钉钉群中@机器人或直接进行私聊，进行交流互动。
-   <div style="max-width: 600px;"><img src="19.png" style="max-width:100%;height:auto;" /></div>
 
-## 配置企业微信机器人使用
+1. 单击**应用开发**，在**钉钉应用**页面，点击目标应用。
+   <div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/5751759671/p1049772.png" style="max-width:100%;height:auto;" /></div>
+
+2. 在目标应用开发导航栏，单击**版本管理与发布**，在**版本管理与发布**页面，点击**创建新版本**。进入版本详情页面，输入**应用版本号**和**版本描述**信息，选择合适的**应用可见范围**，完成后点击**保存**。并在弹窗中点击**直接发布**。
+   <div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/8888359671/p1049583.png" style="max-width:100%;height:auto;" /></div>
+
+### 3. 在控制台配置 channel 参数
+
+在 **计算巢控制参数** 中填入钉钉应用的 **Client ID** 和 **Client Secret**，并**创建服务实例**。
+
+### 4. 测试机器人
+
+服务实例创建完成后，你可以创建群聊或在已有群聊中添加机器人，并与机器人对话，查看效果。
+
+> 更改百炼模型请参考[如何更改 OpenClaw 调用的模型](#)。
+
+1. 在钉钉**群管理**中添加机器人。进入钉钉群**群设置**页面，点击**机器人**卡片区域，在**机器人管理**页面，点击**添加机器人**。在**添加机器人**的**搜索**文本框中输入目标机器人名称，并选中要添加的机器人。点击**添加**，完成后再点击**完成添加**。
+
+2. 在钉钉群中 **@机器人** 进行交流互动。也可以在钉钉的搜索栏中，输入机器人名称后，在功能页检索到对应机器人，进行私聊互动。
+   <div style="max-width: 381px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/1202280771/p1054245.png" style="max-width:100%;height:auto;" /></div>
+
+## 配置企业微信机器人
 1. 访问[企业微信管理后台](https://work.weixin.qq.com/wework_admin/frame#/aiHelper/create)，在左侧导航栏单击 安全与管理 > 管理工具 > 智能机器人。单击创建机器人。
 
 2. 通过API模式创建智能机器人:
@@ -105,5 +96,5 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
    在已添加机器人的群中@机器人即可实现流式对话，效果如下：
    <div style="max-width: 300px;"><img src="img_2.png" style="max-width:100%;height:auto;" /></div>
 
-## 如何使用OpenClaw（Clawdbot）
+# 如何使用OpenClaw（Clawdbot）
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
