@@ -22,6 +22,10 @@ Conditions:
     Fn::Equals:
       - true
       - Ref: CreateDingTalk
+  EnableEnterpriseWeChatRobotConditions:
+    Fn::Equals:
+      - true
+      - Ref: EnableEnterpriseWeChatRobot
 Parameters:
   VpcOption:
     Type: String
@@ -150,12 +154,24 @@ Parameters:
           - ecs.u1
           - ecs.e
           - ecs.u2a
+          - ecs.u2i
     AllowedValues:
       - ecs.e-c1m1.large
       - ecs.e-c1m2.large
       - ecs.e-c1m1.xlarge
       - ecs.e-c1m2.xlarge
       - ecs.u2a-c1m2.xlarge
+      - ecs.u2i-c1m1.large
+      - ecs.u2i-c1m2.large
+      - ecs.u2i-c1m4.large
+      - ecs.u2i-c1m8.large
+      - ecs.u2i-c1m1.xlarge
+      - ecs.u2i-c1m2.xlarge
+      - ecs.u2i-c1m4.xlarge
+      - ecs.u2i-c1m8.xlarge
+      - ecs.u2i-c1m1.2xlarge
+      - ecs.u2i-c1m2.2xlarge
+
   InstancePassword:
     NoEcho: true
     Type: String
@@ -312,6 +328,36 @@ Parameters:
             - true
             - ${CreateDingTalk}
     Default: ''
+  EnableEnterpriseWeChatRobot:
+    Type: Boolean
+    Label:
+      en: Enable Enterprise WeChat Robot
+      zh-cn: 启用企业微信机器人
+    Default: false
+  EnterpriseWeChatRobotToken:
+    Type: String
+    Label:
+      en: Enterprise WeChat Robot Token
+      zh-cn: 企业微信机器人 Token
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableEnterpriseWeChatRobot}
+    Default: ''
+  EnterpriseWeChatRobotEncodingAESKey:
+    Type: String
+    Label:
+      en: Enterprise WeChat Robot EncodingAESKey
+      zh-cn: 企业微信机器人 EncodingAESKey
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableEnterpriseWeChatRobot}
+    Default: ''
 Resources:
   # 新建vpc
   EcsVpc:
@@ -409,69 +455,18 @@ Resources:
       CommandContent:
         Fn::Sub:
           - |
-            # #!/bin/bash
-            # CONFIG_FILE="/root/.clawdbot/clawdbot.json"
-            # yum install -y jq > /dev/null 2>&1
-
-            # TOKEN=$(openssl rand -hex 16 | sed 's/\(..\)/\1-/g; s/-$//')
-            # sed -i "s/\${!BAILIAN_API_KEY}/${ApiKey}/g" /root/.clawdbot/clawdbot.json
-            # sed -i "s/\${!TOKEN}/$TOKEN/g" /root/.clawdbot/clawdbot.json
-
-            # jq '.gateway.http = {
-            #   "endpoints": {
-            #     "responses": {
-            #       "enabled": true
-            #     }
-            #   }
-            # }' "/root/.clawdbot/clawdbot.json" > "/root/.clawdbot/clawdbot.json.tmp" && mv "/root/.clawdbot/clawdbot.json.tmp" "/root/.clawdbot/clawdbot.json" -f
-
-
-            # cd /root/clawdbot
-            # export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-            # export DBUS_SESSION_BUS_ADDRESS="unix:path=${!XDG_RUNTIME_DIR}/bus"
-            # systemctl --user restart clawdbot-gateway
-
-            # echo $TOKEN
-
             #!/bin/bash
-
-            # 配置变量
-            NEW_API_KEY="${ApiKey}"
-            CONFIG_FILE="/root/.clawdbot/clawdbot.json"
-            AUTH_CONFIG_FILE="/root/.clawdbot/agents/main/agent/auth-profiles.json"
-
-            # 1. 安装 jq（如果未安装），静默模式
-            if ! command -v jq &> /dev/null; then
-                yum install -y jq > /dev/null 2>&1
-            fi
-
-            # 2. 检查并更新 clawdbot.json 中的 token（仅当为空或为 "$token" 时）
-            CURRENT_TOKEN=$(jq -r '.gateway.auth.token // empty' "$CONFIG_FILE" 2>/dev/null || true)
-
-            if [ -z "$CURRENT_TOKEN" ] || [ "$CURRENT_TOKEN" = "\$token" ]; then
-                NEW_TOKEN=$(openssl rand -hex 16)
-                jq --arg token "$NEW_TOKEN" \
-                  '.gateway.auth.token = $token' \
-                  "$CONFIG_FILE" > "${!CONFIG_FILE}.tmp" && \
-                mv "${!CONFIG_FILE}.tmp" "$CONFIG_FILE"
-            fi
-
-            # 3. 更新 auth-profiles.json 中的 API Key（仅当 NEW_API_KEY 非空）
-            if [ -n "$NEW_API_KEY" ]; then
-                jq --arg newkey "$NEW_API_KEY" \
-                  '.profiles."alibaba-cloud:default".key = $newkey' \
-                  "$AUTH_CONFIG_FILE" > "${!AUTH_CONFIG_FILE}.tmp" && \
-                mv "${!AUTH_CONFIG_FILE}.tmp" "$AUTH_CONFIG_FILE"
-            fi
-
-            TOKEN=$(sed -z 's/.*\"token": *\"\([^\"]*\)\".*/\1/' /root/.clawdbot/clawdbot.json | tr -d '\0')
+            NEW_API_KEY=${ApiKey}
+            Site=
+            sh /opt/.swas/run-cmd.sh config "${!NEW_API_KEY}" "${!Site}" > /dev/null
+            sleep 30
+            TOKEN=$(/opt/.swas/run-cmd.sh get-url)
             echo $TOKEN
 
           - ApiKey:
               Fn::Select:
                 - ApiKeyValue
                 - Ref: BaiLianApiKey
-
   AuthConfigForDingTalk:
     Type: ALIYUN::AppFlow::UserAuthConfig
     DependsOn: RunInstallCommand
@@ -531,36 +526,45 @@ Resources:
           Ref: AuthConfigForDingTalk
         clawdBotAuthId:
           Ref: AuthConfigForClawdBot
+  EnableEnterpriseWeChatRobot:
+    Type: ALIYUN::ECS::RunCommand
+    Condition: EnableEnterpriseWeChatRobotConditions
+    Properties:
+      InstanceIds:
+        Fn::GetAtt:
+        - InstanceGroup
+        - InstanceIds
+      Type: RunShellScript
+      Sync: true
+      Timeout: 3600
+      CommandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            APP_ID=${EnterpriseWeChatRobotToken}
+            APP_SECRET=${EnterpriseWeChatRobotEncodingAESKey}
+            sh /opt/.swas/run-cmd.sh set-channel wecom "${!APP_ID}" "${!APP_SECRET}" > /dev/null
+            sh /opt/.swas/run-cmd.sh restart
+            echo "OpenClaw配置成功."
+
+          - EnterpriseWeChatRobotToken:
+              Ref: EnterpriseWeChatRobotToken
+            EnterpriseWeChatRobotEncodingAESKey:
+              Ref: EnterpriseWeChatRobotEncodingAESKey
 Outputs:
-  Clawdbot Addresses:
+  OpenClaw Addresses:
     Description:
-      zh-cn: Clawdbot 地址
-      en: Clawdbot Addresses
+      zh-cn: OpenClaw 地址
+      en: OpenClaw Addresses
     Value:
-      Fn::Sub:
-        - 'http://${ServerAddress}:18789?token=${Token}'
-        - ServerAddress:
-            Fn::If:
-              - EnablePublicIpConditions
-              - Fn::Select:
-                - 0
-                - Fn::GetAtt:
-                  - InstanceGroup
-                  - PublicIps
-              - Fn::Select:
-                - 0
-                - Fn::GetAtt:
-                  - InstanceGroup
-                  - PrivateIps
-          Token:
-            Fn::Base64Decode:
-              Fn::GetJsonValue:
-                - Output
-                - Fn::Select:
-                    - 0
-                    - Fn::GetAtt:
-                        - RunInstallCommand
-                        - InvokeResults
+      Fn::Base64Decode:
+        Fn::GetJsonValue:
+          - Output
+          - Fn::Select:
+              - 0
+              - Fn::GetAtt:
+                  - RunInstallCommand
+                  - InvokeResults
   Console@WebhookUrl:
     Condition: CreateDingTalkConditions
     Description:
@@ -573,29 +577,6 @@ Outputs:
       Fn::GetAtt:
         - Flow
         - WebhookAddress
-  # Clawdbot Private Addresses:
-  #   Condition: EnablePublicIpConditions
-  #   Description:
-  #     zh-cn: Clawdbot 内网地址
-  #     en: Clawdbot Private Addresses
-  #   Value:
-  #     Fn::Sub:
-  #       - 'http://${ServerAddress}:18789/?token=${Token}'
-  #       - ServerAddress:
-  #           Fn::Select:
-  #             - 0
-  #             - Fn::GetAtt:
-  #                 - InstanceGroup
-  #                 - PrivateIps
-  #         Token:
-  #           Fn::Base64Decode:
-  #             Fn::GetJsonValue:
-  #               - Output
-  #               - Fn::Select:
-  #                   - 0
-  #                   - Fn::GetAtt:
-  #                       - RunInstallCommand
-  #                       - InvokeResults
 
 Metadata:
   ALIYUN::ROS::Interface:
@@ -620,6 +601,9 @@ Metadata:
           - DingTalkTemplateId
           - DingTalkClientId
           - DingTalkClientSecret
+          - EnableEnterpriseWeChatRobot
+          - EnterpriseWeChatRobotToken
+          - EnterpriseWeChatRobotEncodingAESKey
         Label:
           default: 服务配置
       - Parameters:
@@ -669,7 +653,7 @@ Metadata:
             - PayType
             - InternetChargeType
           Type: Normal
-          Description: 固定带宽不限流量，超值性价比!
+          Description: 每月免费流量，超值性价比！
         - Name: 尝鲜套餐，只需0.3元/小时
           Parameters:
             EcsInstanceType: ecs.e-c1m2.large
@@ -684,7 +668,7 @@ Metadata:
             - PayType
             - InternetChargeType
           Type: Normal
-          Description: 弗吉尼亚，北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o#student-300coupon" target="_blank">立即领取</a>
+          Description: 弗吉尼亚，北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o&utm_content=g_1000409993#student-300coupon" target="_blank">立即领取</a>
         - Name: 自定义套餐
           Parameters: {}
           OrderList:

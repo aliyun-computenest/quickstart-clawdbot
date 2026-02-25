@@ -85,5 +85,25 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
 在钉钉群中@机器人或直接进行私聊，进行交流互动。
    <div style="max-width: 600px;"><img src="19.png" style="max-width:100%;height:auto;" /></div>
 
+## 配置企业微信机器人使用
+1. 访问企业微信管理后台，在左侧导航栏单击 安全与管理 > 管理工具 > 智能机器人。单击创建机器人。
+
+2. 通过API模式创建智能机器人:
+
+   在页面底部单击API模式创建。 分别单击Token和Encoding-AESKey后的随机获取，保存Token和Encoding-AESKey。
+   <div style="max-width: 600px;"><img src="img_1.png" style="max-width:100%;height:auto;" /></div>
+
+   在计算巢创建页面输入获取的Token和Encoding-AESKey，等待服务实例创建完成，回到API模式创建页面，填入URL，Token和Encoding-AESKey字段保持不变，单击创建。
+
+   URL的格式为http://IP地址:18789/webhooks/wecom。IP地址需要替换为OpenClaw服务器的IP地址。
+   <div style="max-width: 600px;"><img src="img_3.png" style="max-width:100%;height:auto;" /></div>
+
+3. 方案验证:
+   在群聊中点击添加群成员，搜索创建完成的机器人名称，加入群聊
+   <div style="max-width: 600px;"><img src="img.png" style="max-width:100%;height:auto;" /></div>
+
+   在已添加机器人的群中@机器人即可实现流式对话，效果如下：
+   <div style="max-width: 300px;"><img src="img_2.png" style="max-width:100%;height:auto;" /></div>
+
 ## 如何使用OpenClaw（Clawdbot）
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
