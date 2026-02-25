@@ -5,7 +5,7 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
 
 ## 🚀 部署流程
 
-1. 访问计算巢OpenClaw（Clawdbot）社区版[部署链接](https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&ServiceId=service-249322bfe8c045798808)，按提示填写部署参数：
+1. 访问计算巢OpenClaw（Clawdbot）社区版[部署链接](https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&ServiceId=service-249322bfe8c045798808)，按提示填写部署参数（钉钉应用和企业微信机器人配置参数请参考下文获取）：
    <div style="max-width: 600px;"><img src="1.jpg" style="max-width:100%;height:auto;" /></div>
 
 2. 参数填写完成后可以看到对应询价明细，确认参数后点击**下一步：确认订单**。
