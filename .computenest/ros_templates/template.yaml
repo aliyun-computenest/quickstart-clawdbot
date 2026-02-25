@@ -265,7 +265,7 @@ Parameters:
     Type: Boolean
     Label:
       en: Enable DingTalk application link Moltbot
-      zh-cn: 启用钉钉应用连接Moltbot
+      zh-cn: 启用钉钉应用连接 Moltbot
     Default: false
   DingTalkTemplateId:
     Type: String
@@ -334,6 +334,11 @@ Parameters:
       en: Enable Enterprise WeChat Robot
       zh-cn: 启用企业微信机器人
     Default: false
+    Description:
+      en: >-
+        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808/beta?isInstance=true" target="_blank">How to Configure a WeChat Work Robot</a>
+      zh-cn: >-
+        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808/beta?isInstance=true" target="_blank">如何配置企业微信机器人</a>
   EnterpriseWeChatRobotToken:
     Type: String
     Label:

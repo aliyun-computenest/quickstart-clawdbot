@@ -86,7 +86,7 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
    <div style="max-width: 600px;"><img src="19.png" style="max-width:100%;height:auto;" /></div>
 
 ## 配置企业微信机器人使用
-1. 访问企业微信管理后台，在左侧导航栏单击 安全与管理 > 管理工具 > 智能机器人。单击创建机器人。
+1. 访问[企业微信管理后台](https://work.weixin.qq.com/wework_admin/frame#/aiHelper/create)，在左侧导航栏单击 安全与管理 > 管理工具 > 智能机器人。单击创建机器人。
 
 2. 通过API模式创建智能机器人:
 
