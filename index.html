@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="计算巢是阿里云开放给企业应用服务商的服务管理平台。服务商能够在计算巢上发布私有化部署服务，为其客户提供云上软件一键部署的能力；同时也支持全托管模式的服务，赋能服务商托管其客户资源。">
+  <title>Home - Aliyun 计算巢 x Demo</title>
+
+  <link rel="shortcut icon" href="img/favicon.ico">
+
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css">
+  <link rel="stylesheet" href="css/theme.css">
+  
+
+  
+
+  
+  
+
+  
+    <script src="search/main.js"></script>
+  
+
+  
+
+  <script src="js/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="nav">
+      <div class="nav-inner">
+        <div class="logo">
+          <img src="./img/logo-2x.png">
+        </div>
+        <div class="nav-list">
+          <ul>
+          
+              <li><a href="#_1">🌟 服务简介</a></li>
+              
+          
+              <li><a href="#_2">🚀 部署流程</a></li>
+              
+          
+              <li><a href="#_3">📚 使用指南</a></li>
+              
+                  <li><a href="#_4">配置钉钉机器人</a></li>
+                  
+                      <li class="li-h3"><a href="#1">1. 创建钉钉应用</a></li>
+                  
+                      <li class="li-h3"><a href="#2">2. 配置钉钉机器人</a></li>
+                  
+                      <li class="li-h3"><a href="#3-channel">3. 在控制台配置 channel 参数</a></li>
+                  
+                      <li class="li-h3"><a href="#4">4. 测试机器人</a></li>
+                  
+              
+                  <li><a href="#_5">配置企业微信机器人</a></li>
+                  
+              
+          
+              <li><a href="#openclawclawdbot">如何使用OpenClaw（Clawdbot）</a></li>
+              
+          
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="content theme-github">
+      
+      <div class="content-inner">        
+        
+        <h2 id="_1">🌟 服务简介</h2>
+<p>OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平台。OpenClaw（Clawdbot） 可以帮助用户自动化重复性的桌面任务，提高工作效率。OpenClaw（Clawdbot） 具有直观的用户界面和强大的自动化功能，支持多种应用场景。通过 OpenClaw（Clawdbot），您可以轻松创建、管理和执行自动化任务，无需编程经验。它还提供了丰富的集成接口，能够与其他系统和服务无缝协作。</p>
+<h2 id="_2">🚀 部署流程</h2>
+<ol>
+<li>
+<p>访问计算巢OpenClaw（Clawdbot）社区版<a href="https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&amp;ServiceId=service-249322bfe8c045798808">部署链接</a>，按提示填写部署参数（钉钉应用和企业微信机器人配置参数请参考下文获取）：
+ <br />
+<div style="max-width: 600px;"><img src="1.jpg" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+<li>
+<p>参数填写完成后可以看到对应询价明细，确认参数后点击<strong>下一步：确认订单</strong>。</p>
+</li>
+<li>
+<p>确认订单完成后同意服务协议并点击<strong>立即创建</strong>进入部署阶段。</p>
+</li>
+<li>
+<p>等待部署完成后进入服务实例详情页。
+ <br />
+<div style="max-width: 600px;"><img src="2.jpg" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+<li>
+<p>点击服务地址并使用OpenClaw（Clawdbot）社区版。
+ <br />
+<div style="max-width: 600px;"><img src="3.jpg" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+</ol>
+<h1 id="_3">📚 使用指南</h1>
+<h2 id="_4">配置钉钉机器人</h2>
+<h3 id="1">1. 创建钉钉应用</h3>
+<p>创建钉钉应用需要钉钉账号有开发者权限。可以联系组织管理员获取钉钉开放平台的开发权限，具体操作请参见<a href="https://open.dingtalk.com/document/orgapp/obtain-developer-permissions">获取开发者权限</a>。</p>
+<h4 id="11">1.1 创建应用</h4>
+<ol>
+<li>
+<p>访问<a href="https://open-dev.dingtalk.com/">钉钉开放平台</a>，点击<strong>创建</strong>。如果创建过应用但未展示应用开发指引，点击<strong>立即开始</strong>进入钉钉应用页面。</p>
+</li>
+<li>
+<p>在应用开发的左侧导航栏中，点击<strong>钉钉应用</strong>，在<strong>钉钉应用</strong>页面右上角点击<strong>创建应用</strong>。
+ <br />
+<div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/8888359671/p1049576.png" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+<li>
+<p>在<strong>创建应用</strong>面板，填写<strong>应用名称</strong>和<strong>应用描述</strong>，在<strong>应用图标</strong>上传图标，完成后点击<strong>保存</strong>。</p>
+</li>
+</ol>
+<h4 id="12-client-id-client-secret">1.2 查看应用 Client ID 和 Client Secret</h4>
+<p>在左侧菜单选择<strong>凭证与基础信息</strong>，复制 <strong>Client ID</strong> 和 <strong>Client Secret</strong>。
+ <br />
+<div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/8888359671/p1049599.png" style="max-width:100%;height:auto;" /></div>
+</p>
+<h3 id="2">2. 配置钉钉机器人</h3>
+<h4 id="21">2.1 配置钉钉机器人</h4>
+<ol>
+<li>
+<p>访问<a href="https://open-dev.dingtalk.com/fe/app">钉钉应用列表</a>。找到刚刚创建的应用，点击应用名称进入详情页面。</p>
+</li>
+<li>
+<p>在<strong>添加应用能力</strong>页面，找到机器人卡片，点击<strong>添加</strong>。</p>
+</li>
+</ol>
+<p>在机器人配置页面，打开<strong>机器人配置</strong>开关，可以参考下图完成配置。<strong>消息接收模式</strong>请选择 <strong>Stream 模式</strong>，然后单击<strong>发布</strong>。
+ <br />
+<div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/5359430771/p1053050.png" style="max-width:100%;height:auto;" /></div>
+</p>
+<h4 id="32">3.2 发布应用版本</h4>
+<p>应用创建完成后，如果需要将应用供企业内其他用户使用，需要发布一个版本。</p>
+<ol>
+<li>
+<p>单击<strong>应用开发</strong>，在<strong>钉钉应用</strong>页面，点击目标应用。
+ <br />
+<div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/5751759671/p1049772.png" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+<li>
+<p>在目标应用开发导航栏，单击<strong>版本管理与发布</strong>，在<strong>版本管理与发布</strong>页面，点击<strong>创建新版本</strong>。进入版本详情页面，输入<strong>应用版本号</strong>和<strong>版本描述</strong>信息，选择合适的<strong>应用可见范围</strong>，完成后点击<strong>保存</strong>。并在弹窗中点击<strong>直接发布</strong>。
+ <br />
+<div style="max-width: 600px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/8888359671/p1049583.png" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+</ol>
+<h3 id="3-channel">3. 在控制台配置 channel 参数</h3>
+<p>在 <strong>计算巢控制参数</strong> 中填入钉钉应用的 <strong>Client ID</strong> 和 <strong>Client Secret</strong>，并<strong>创建服务实例</strong>。</p>
+<h3 id="4">4. 测试机器人</h3>
+<p>服务实例创建完成后，你可以创建群聊或在已有群聊中添加机器人，并与机器人对话，查看效果。</p>
+<blockquote>
+<p>更改百炼模型请参考<a href="#">如何更改 OpenClaw 调用的模型</a>。</p>
+</blockquote>
+<ol>
+<li>
+<p>在钉钉<strong>群管理</strong>中添加机器人。进入钉钉群<strong>群设置</strong>页面，点击<strong>机器人</strong>卡片区域，在<strong>机器人管理</strong>页面，点击<strong>添加机器人</strong>。在<strong>添加机器人</strong>的<strong>搜索</strong>文本框中输入目标机器人名称，并选中要添加的机器人。点击<strong>添加</strong>，完成后再点击<strong>完成添加</strong>。</p>
+</li>
+<li>
+<p>在钉钉群中 <strong>@机器人</strong> 进行交流互动。也可以在钉钉的搜索栏中，输入机器人名称后，在功能页检索到对应机器人，进行私聊互动。
+ <br />
+<div style="max-width: 381px;"><img src="https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/1202280771/p1054245.png" style="max-width:100%;height:auto;" /></div>
+</p>
+</li>
+</ol>
+<h2 id="_5">配置企业微信机器人</h2>
+<ol>
+<li>
+<p>访问<a href="https://work.weixin.qq.com/wework_admin/frame#/aiHelper/create">企业微信管理后台</a>，在左侧导航栏单击 安全与管理 &gt; 管理工具 &gt; 智能机器人。单击创建机器人。</p>
+</li>
+<li>
+<p>通过API模式创建智能机器人:</p>
+</li>
+</ol>
+<p>在页面底部单击API模式创建。 分别单击Token和Encoding-AESKey后的随机获取，保存Token和Encoding-AESKey。
+ <br />
+<div style="max-width: 600px;"><img src="img_1.png" style="max-width:100%;height:auto;" /></div>
+</p>
+<p>在计算巢创建页面输入获取的Token和Encoding-AESKey，等待服务实例创建完成，回到API模式创建页面，填入URL，Token和Encoding-AESKey字段保持不变，单击创建。</p>
+<p>URL的格式为http://IP地址:18789/webhooks/wecom。IP地址需要替换为OpenClaw服务器的IP地址。
+ <br />
+<div style="max-width: 600px;"><img src="img_3.png" style="max-width:100%;height:auto;" /></div>
+</p>
+<ol>
+<li>方案验证:
+   在群聊中点击添加群成员，搜索创建完成的机器人名称，加入群聊
+ <br />
+<div style="max-width: 600px;"><img src="img.png" style="max-width:100%;height:auto;" /></div>
+</li>
+</ol>
+<p>在已添加机器人的群中@机器人即可实现流式对话，效果如下：
+ <br />
+<div style="max-width: 300px;"><img src="img_2.png" style="max-width:100%;height:auto;" /></div>
+</p>
+<h1 id="openclawclawdbot">如何使用OpenClaw（Clawdbot）</h1>
+<p>更多用法请参考OpenClaw（Clawdbot）<a href="https://docs.clawd.bot/">官网文档</a>。</p>
+        
+      </div>
+
+      <div class="copyrights">© 2009-2022 Aliyun.com 版权所有</div>
+    </div>
+  </div>
+  
+  <!--
+  MkDocs version      : 1.6.1
+  Docs Build Date UTC : 2026-02-25 07:55:42.050106+00:00
+  -->
+</body>
+</html>
