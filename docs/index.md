@@ -69,8 +69,6 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
 
 服务实例创建完成后，你可以创建群聊或在已有群聊中添加机器人，并与机器人对话，查看效果。
 
-> 更改百炼模型请参考[如何更改 OpenClaw 调用的模型](#)。
-
 1. 在钉钉**群管理**中添加机器人。进入钉钉群**群设置**页面，点击**机器人**卡片区域，在**机器人管理**页面，点击**添加机器人**。在**添加机器人**的**搜索**文本框中输入目标机器人名称，并选中要添加的机器人。点击**添加**，完成后再点击**完成添加**。
 
 2. 在钉钉群中 **@机器人** 进行交流互动。也可以在钉钉的搜索栏中，输入机器人名称后，在功能页检索到对应机器人，进行私聊互动。
@@ -95,6 +93,13 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
 
    在已添加机器人的群中@机器人即可实现流式对话，效果如下：
    <div style="max-width: 300px;"><img src="img_2.png" style="max-width:100%;height:auto;" /></div>
+
+
+## 更改OpenClaw调用的模型
+在OpenClaw服务页面，点击Config>Raw,搜索models，修改providers与agents中的模型code, 模型Code可以在[百炼模型广场](https://bailian.console.aliyun.com/cn-beijing/?spm=a2c4g.11186623.0.0.4ea74d1bxyfbtb&tab=model#/model-market/all)页面查询。
+   <div style="max-width: 900px;"><img src="model.jpg" style="max-width:100%;height:auto;" /></div>
+   <div style="max-width: 900px;"><img src="img_9.png" style="max-width:100%;height:auto;" /></div>
+
 
 # 如何使用OpenClaw（Clawdbot）
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
