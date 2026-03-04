@@ -95,12 +95,26 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
    <div style="max-width: 300px;"><img src="img_2.png" style="max-width:100%;height:auto;" /></div>
 
 
-
+# 常见问题
 
 ## 更改OpenClaw调用的模型
 在OpenClaw服务页面，点击Config>Raw,搜索models，修改providers与agents中的模型code, 模型Code可以在[百炼模型广场](https://bailian.console.aliyun.com/cn-beijing/?spm=a2c4g.11186623.0.0.4ea74d1bxyfbtb&tab=model#/model-market/all)页面查询。
    <div style="max-width: 900px;"><img src="model.jpg" style="max-width:100%;height:auto;" /></div>
    <div style="max-width: 900px;"><img src="img_9.png" style="max-width:100%;height:auto;" /></div>
+
+## 如何重启服务
+远程连接ECS，执行以下命令：
+
+```shell
+/opt/.swas/run-cmd.sh restart
+```
+
+
+## 如何执行Openclaw命令
+远程连接ECS，执行命令切换用户到admin后执行Openclaw命令：
+```shell
+sudo su admin
+```
 
 
 # 如何使用OpenClaw（Clawdbot）
