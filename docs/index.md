@@ -116,6 +116,8 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
 sudo su admin
 ```
 
+## 如何配置阿里云百炼Coding Plan
+参考官方文档[阿里云百炼Coding Plan](hhttps://help.aliyun.com/zh/model-studio/openclaw-coding-plan?spm=a2c4g.11186623.0.0.2170689dJwCAhI#0c6a73ae73mqr)
 
 # 如何使用OpenClaw（Clawdbot）
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
