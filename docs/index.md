@@ -103,21 +103,42 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
    <div style="max-width: 900px;"><img src="img_9.png" style="max-width:100%;height:auto;" /></div>
 
 ## 如何重启服务
-远程连接ECS，执行以下命令：
+服务实例>资源>执行命令：：
 
 ```shell
+#!/bin/bash
 /opt/.swas/run-cmd.sh restart
 ```
-
 
 ## 如何执行Openclaw命令
 远程连接ECS，执行命令切换用户到admin后执行Openclaw命令：
 ```shell
 sudo su admin
 ```
+## 重置服务
+服务实例>运维管理>重置服务>配置参数创建任务：
+   <div style="max-width: 900px;"><img src="20.jpg" style="max-width:100%;height:auto;" /></div>
 
-## 如何配置阿里云百炼Coding Plan
-参考官方文档[阿里云百炼Coding Plan](hhttps://help.aliyun.com/zh/model-studio/openclaw-coding-plan?spm=a2c4g.11186623.0.0.2170689dJwCAhI#0c6a73ae73mqr)
+## 配置阿里云百炼Coding Plan
+服务实例>运维管理>配置百炼CodingPlan>配置参数创建任务:
+   <div style="max-width: 900px;"><img src="20.jpg" style="max-width:100%;height:auto;" /></div>
+
+如果运维管理中无配置百炼Coding Plan的选项，可以手动执行命令创建。
+服务实例>资源>执行命令：
+   <div style="max-width: 900px;"><img src="22.jpg" style="max-width:100%;height:auto;" /></div>
+
+```shell
+#!/bin/bash
+sh /opt/.swas/run-cmd.sh config "{{BaiLianApiKey}}" "domestic" > /dev/null
+sh /opt/.swas/run-cmd.sh restart
+```
+
+## 配置钉钉应用
+服务实例>运维管理>配置钉钉应用>配置参数创建任务
+
+## 配置企业微信
+服务实例>运维管理>配置企业微信>配置参数创建任务
+
 
 # 如何使用OpenClaw（Clawdbot）
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
