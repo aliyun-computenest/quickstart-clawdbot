@@ -103,7 +103,7 @@ OpenClaw（Clawdbot） 是一个现代化的机器人流程自动化（RPA）平
    <div style="max-width: 900px;"><img src="img_9.png" style="max-width:100%;height:auto;" /></div>
 
 ## 如何重启服务
-服务实例>资源>执行命令：：
+服务实例>资源>执行命令：
 
 ```shell
 #!/bin/bash
@@ -137,8 +137,28 @@ sh /opt/.swas/run-cmd.sh restart
 ## 配置钉钉应用
 服务实例>运维管理>配置钉钉应用>配置参数创建任务
 
+若无运维管理选项，可以手动执行命令配置：
+服务实例>资源>执行命令：
+```shell
+#!/bin/bash
+APP_ID="替换成钉钉ClientID"
+APP_SECRET="替换成钉钉ClientSecret"
+sh /opt/.swas/run-cmd.sh set-channel dingtalk "$APP_ID" "$APP_SECRET" > /dev/null
+sh /opt/.swas/run-cmd.sh restart
+```
+
 ## 配置企业微信
 服务实例>运维管理>配置企业微信>配置参数创建任务
+
+若无运维管理选项，可以手动执行命令配置：
+服务实例>资源>执行命令：
+```shell
+#!/bin/bash
+APP_ID="替换为Token"
+APP_SECRET="替换成EncodingAESKey"
+sh /opt/.swas/run-cmd.sh set-channel wecom "$APP_ID" "$APP_SECRET" > /dev/null
+sh /opt/.swas/run-cmd.sh restart
+```
 
 
 # 如何使用OpenClaw（Clawdbot）
