@@ -129,9 +129,10 @@ sudo su admin
 
 ```shell
 #!/bin/bash
-sh /opt/.swas/run-cmd.sh config "{{BaiLianApiKey}}" "domestic" > /dev/null
+sh /opt/.swas/run-cmd.sh config "<<Coding Plan ApiKey>>" "domestic" > /dev/null
 sh /opt/.swas/run-cmd.sh restart
 ```
+
 
 ## 配置钉钉应用
 服务实例>运维管理>配置钉钉应用>配置参数创建任务
