@@ -160,6 +160,18 @@ sh /opt/.swas/run-cmd.sh set-channel wecom "$APP_ID" "$APP_SECRET" > /dev/null
 sh /opt/.swas/run-cmd.sh restart
 ```
 
+## 配置飞书
+
+手动执行命令配置：
+服务实例>资源>执行命令：
+```shell
+#!/bin/bash
+APP_ID="替换为飞书ID"
+APP_SECRET="替换为飞书密码"
+sh /opt/.swas/run-cmd.sh set-channel feishu "$APP_ID" "$APP_SECRET" > /dev/null
+sh /opt/.swas/run-cmd.sh restart
+```
+
 
 # 如何使用OpenClaw（Clawdbot）
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
