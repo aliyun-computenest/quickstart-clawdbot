@@ -266,6 +266,11 @@ Parameters:
     Label:
       en: Enable DingTalk application link Moltbot
       zh-cn: 启用钉钉应用连接 Moltbot
+    Description:
+      en: >-
+        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a Dingtalk App</a>
+      zh-cn: >-
+        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置钉钉应用</a>
     Default: false
   DingTalkClientId:
     Type: String
@@ -318,9 +323,9 @@ Parameters:
     Default: false
     Description:
       en: >-
-        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808/beta?isInstance=true" target="_blank">How to Configure a WeChat Work Robot</a>
+        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a WeChat Work Robot</a>
       zh-cn: >-
-        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808/beta?isInstance=true" target="_blank">如何配置企业微信机器人</a>
+        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置企业微信机器人</a>
   EnterpriseWeChatRobotToken:
     Type: String
     Label:
@@ -444,11 +449,14 @@ Resources:
           - |
             #!/bin/bash
             NEW_API_KEY=${ApiKey}
-            Site=
+            Site="domestic"
+            NEW_PORT="18789"
+            CONFIG_FILE="/home/admin/.openclaw/openclaw.json"
+            OLD_PORT=$(jq -r '.gateway.port // empty' "$CONFIG_FILE")
+            sed -i -E -e "s|(:[[:space:]]*)$OLD_PORT([,}])|\1$NEW_PORT\2|g" -e "s|:$OLD_PORT\"|:$NEW_PORT\"|g" "$CONFIG_FILE"
             sh /opt/.swas/run-cmd.sh config "${!NEW_API_KEY}" "${!Site}" > /dev/null
+            sh /opt/.swas/run-cmd.sh restart
             sleep 30
-            TOKEN=$(/opt/.swas/run-cmd.sh get-url)
-            echo $TOKEN
 
           - ApiKey:
               Fn::Select:
@@ -457,6 +465,7 @@ Resources:
   EnableDingtalkRobotByRunCommand:
     Type: ALIYUN::ECS::RunCommand
     Condition: CreateDingTalkConditions
+    DependsOn: RunInstallCommand
     Properties:
       InstanceIds:
         Fn::GetAtt:
@@ -474,6 +483,7 @@ Resources:
             sh /opt/.swas/run-cmd.sh set-channel dingtalk "${!APP_ID}" "${!APP_SECRET}" > /dev/null
             sh /opt/.swas/run-cmd.sh restart
             echo "OpenClaw配置成功."
+            sleep 10
 
           - DingTalkClientId:
               Ref: DingTalkClientId
@@ -482,6 +492,7 @@ Resources:
   EnableEnterpriseWeChatRobotByRunCommand:
     Type: ALIYUN::ECS::RunCommand
     Condition: EnableEnterpriseWeChatRobotConditions
+    DependsOn: RunInstallCommand
     Properties:
       InstanceIds:
         Fn::GetAtt:
@@ -504,6 +515,20 @@ Resources:
               Ref: EnterpriseWeChatRobotToken
             EnterpriseWeChatRobotEncodingAESKey:
               Ref: EnterpriseWeChatRobotEncodingAESKey
+  GetURLByRunCommand:
+    Type: ALIYUN::ECS::RunCommand
+    Properties:
+      InstanceIds:
+        Fn::GetAtt:
+        - InstanceGroup
+        - InstanceIds
+      Type: RunShellScript
+      Sync: true
+      Timeout: 3600
+      CommandContent: |-
+        #!/bin/bash
+        sleep 30
+        /opt/.swas/run-cmd.sh get-url
 Outputs:
   OpenClaw Addresses:
     Description:
@@ -516,20 +541,8 @@ Outputs:
           - Fn::Select:
               - 0
               - Fn::GetAtt:
-                  - RunInstallCommand
+                  - GetURLByRunCommand
                   - InvokeResults
-  Console@WebhookUrl:
-    Condition: CreateDingTalkConditions
-    Description:
-      zh-cn: 消息接收地址。
-      en: Message receiving address.
-    Label:
-      zh-cn: Webhook Url
-      en: Webhook Url
-    Value:
-      Fn::GetAtt:
-        - Flow
-        - WebhookAddress
 
 Metadata:
   ALIYUN::ROS::Interface:
@@ -621,7 +634,7 @@ Metadata:
             - PayType
             - InternetChargeType
           Type: Normal
-          Description: 弗吉尼亚，北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o&utm_content=g_1000409993#student-300coupon" target="_blank">立即领取</a>
+          Description: 北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o&utm_content=g_1000409993#student-300coupon" target="_blank">立即领取</a>
         - Name: 自定义套餐
           Parameters: {}
           OrderList:
