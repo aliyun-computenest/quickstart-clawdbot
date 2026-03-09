@@ -166,8 +166,8 @@ sh /opt/.swas/run-cmd.sh restart
 服务实例>资源>执行命令：
 ```shell
 #!/bin/bash
-APP_ID="替换为飞书ID"
-APP_SECRET="替换为飞书密码"
+APP_ID="替换为飞书APP_ID"
+APP_SECRET="替换为飞书APP_SECRET"
 sh /opt/.swas/run-cmd.sh set-channel feishu "$APP_ID" "$APP_SECRET" > /dev/null
 sh /opt/.swas/run-cmd.sh restart
 ```
