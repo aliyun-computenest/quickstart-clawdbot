@@ -161,8 +161,8 @@ sh /opt/.swas/run-cmd.sh restart
 ```
 
 ## 配置飞书
-
-手动执行命令配置：
+1. 先参考[文档创建飞书应用](https://docs.openclaw.ai/zh-CN/channels/feishu#%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%9A%E5%88%9B%E5%BB%BA%E9%A3%9E%E4%B9%A6%E5%BA%94%E7%94%A8 )，并获取APP_ID和APP_SECRET
+2. 手动执行命令配置：
 服务实例>资源>执行命令：
 ```shell
 #!/bin/bash
