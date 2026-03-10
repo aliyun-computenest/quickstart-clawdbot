@@ -255,7 +255,7 @@ sh /opt/.swas/run-cmd.sh restart
 
 <img src="http://icms-x-dita-hz.oss-cn-hangzhou.aliyuncs.com/zh-CN/images/p1058375.png?Expires=7258149035&OSSAccessKeyId=STS.NXYTjR353uBZX6D3xUpdfFkww&Signature=H1FpwNnNcqpyY4c%2BGHarWgQyQ8k%3D&security-token=CAISzgJ1q6Ft5B2yfSjIr5vsH9Dm3uoSwoCxWhD113gAfOtKqa7clTz2IHtEfHFvBu4fsPsxm29Y7foclqZdVplOWU3Da%2BB364xK7Q75sX0yIWnuv9I%2Bk5SANTW5KXyShb3%2FAYjQSNfaZY3eCTTtnTNyxr3XbCirW0ffX7SClZ9gaKZ8PGD6F00kYu1bPQx%2FssQXGGLMPPK2SH7Qj3HXEVBjt3gX6wo9y9zmn5zCu0OH0wGqlrRO%2FtypGPX%2BMZkwZqUYesyuwel7epDG1CNt8BVQ%2FM909vcfqW%2Bf4Y7DWgcOvUrZY7GIrMcUJQt4d7U8FaVIofb1iPlkoOvXmpRJRpfKsXy0OM62ZvdDoKOscIvBXr6yxQsuJtf82ZkJus1AV6%2Fw%2FbD%2FoDkLGrxvYzY7alc3aVrxMYzcwxvBAWzIcMvovuxIl%2FQ8oTrmlWeZ4M7RK93xGoABp4HHmyXsQ%2F067m%2BNOV8DphVdVUTzn%2FcY9gtExazPK%2BoKMB3xoRaeCyfQxpK0Q58eh%2F3NLAStVVdmb16Ey2ydyjCeT8hYdJDAkvPw4kUCoH57oZ4S8CWIfF%2Bg5ArtUA3kVqqK3cVpXI4eG1quWTllDbS%2FS5FMYUHndm42i%2BRhZfwgAA%3D%3D" alt="image" width="1000">
 
-若无运维管理选项，可以手动执行命令配置。
+注意：服务版本在v24前的服务实例，无运维管理选项，需要手动执行命令配置
 
 服务实例\>资源\>执行命令：
 
