@@ -26,6 +26,14 @@ Conditions:
     Fn::Equals:
       - true
       - Ref: EnableEnterpriseWeChatRobot
+  EnableQQRobotConditions:
+    Fn::Equals:
+      - true
+      - Ref: EnableQQRobot
+  EnableFeishuRobotConditions:
+    Fn::Equals:
+      - true
+      - Ref: EnableFeishuRobot
 Parameters:
   VpcOption:
     Type: String
@@ -350,6 +358,98 @@ Parameters:
             - true
             - ${EnableEnterpriseWeChatRobot}
     Default: ''
+  EnableQQRobot:
+    Type: Boolean
+    Label:
+      en: Enable QQ Robot
+      zh-cn: 启用QQ机器人
+    Default: false
+    Description:
+      en: >-
+        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a QQ Robot</a>
+      zh-cn: >-
+        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置QQ机器人</a>
+  QQRobotAppId:
+    Type: String
+    Label:
+      en: QQ Robot App ID
+      zh-cn: QQ机器人 App ID
+    Description:
+      en: >-
+        The App ID of the QQ Robot application.
+      zh-cn: >-
+        QQ机器人应用的 App ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableQQRobot}
+    Default: ''
+  QQRobotClientSecret:
+    Type: String
+    NoEcho: true
+    Label:
+      en: QQ Robot Client Secret
+      zh-cn: QQ机器人 Client Secret
+    Description:
+      en: >-
+        The Client Secret of the QQ Robot application.
+      zh-cn: >-
+        QQ机器人应用的 Client Secret。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableQQRobot}
+    Default: ''
+  EnableFeishuRobot:
+    Type: Boolean
+    Label:
+      en: Enable Feishu Robot
+      zh-cn: 启用飞书机器人
+    Default: false
+    Description:
+      en: >-
+        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a Feishu Robot</a>
+      zh-cn: >-
+        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置飞书机器人</a>
+  FeishuRobotAppId:
+    Type: String
+    Label:
+      en: Feishu Robot App ID
+      zh-cn: 飞书机器人 App ID
+    Description:
+      en: >-
+        Visit the Feishu Open Platform to create an application and obtain the App ID.
+      zh-cn: >-
+        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableFeishuRobot}
+    Default: ''
+  FeishuRobotAppSecret:
+    Type: String
+    NoEcho: true
+    Label:
+      en: Feishu Robot App Secret
+      zh-cn: 飞书机器人 App Secret
+    Description:
+      en: >-
+        Visit the Feishu Open Platform to create an application and obtain the App Secret.
+      zh-cn: >-
+        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App Secret。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableFeishuRobot}
+    Default: ''
 Resources:
   # 新建vpc
   EcsVpc:
@@ -483,7 +583,6 @@ Resources:
             sh /opt/.swas/run-cmd.sh set-channel dingtalk "${!APP_ID}" "${!APP_SECRET}" > /dev/null
             sh /opt/.swas/run-cmd.sh restart
             echo "OpenClaw配置成功."
-            sleep 10
 
           - DingTalkClientId:
               Ref: DingTalkClientId
@@ -505,6 +604,7 @@ Resources:
         Fn::Sub:
           - |
             #!/bin/bash
+            sleep 2
             APP_ID=${EnterpriseWeChatRobotToken}
             APP_SECRET=${EnterpriseWeChatRobotEncodingAESKey}
             sh /opt/.swas/run-cmd.sh set-channel wecom "${!APP_ID}" "${!APP_SECRET}" > /dev/null
@@ -515,6 +615,60 @@ Resources:
               Ref: EnterpriseWeChatRobotToken
             EnterpriseWeChatRobotEncodingAESKey:
               Ref: EnterpriseWeChatRobotEncodingAESKey
+  EnableQQRobotByRunCommand:
+    Type: ALIYUN::ECS::RunCommand
+    Condition: EnableQQRobotConditions
+    DependsOn: RunInstallCommand
+    Properties:
+      InstanceIds:
+        Fn::GetAtt:
+        - InstanceGroup
+        - InstanceIds
+      Type: RunShellScript
+      Sync: true
+      Timeout: 3600
+      CommandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            sleep 4
+            APP_ID=${QQRobotAppId}
+            APP_SECRET=${QQRobotClientSecret}
+            sh /opt/.swas/run-cmd.sh set-channel qqbot "${!APP_ID}" "${!APP_SECRET}" > /dev/null
+            sh /opt/.swas/run-cmd.sh restart
+            echo "OpenClaw配置成功."
+
+          - QQRobotAppId:
+              Ref: QQRobotAppId
+            QQRobotClientSecret:
+              Ref: QQRobotClientSecret
+  EnableFeishuRobotByRunCommand:
+    Type: ALIYUN::ECS::RunCommand
+    Condition: EnableFeishuRobotConditions
+    DependsOn: RunInstallCommand
+    Properties:
+      InstanceIds:
+        Fn::GetAtt:
+        - InstanceGroup
+        - InstanceIds
+      Type: RunShellScript
+      Sync: true
+      Timeout: 3600
+      CommandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            sleep 6
+            APP_ID=${FeishuRobotAppId}
+            APP_SECRET=${FeishuRobotAppSecret}
+            sh /opt/.swas/run-cmd.sh set-channel feishu "${!APP_ID}" "${!APP_SECRET}" > /dev/null
+            sh /opt/.swas/run-cmd.sh restart
+            echo "OpenClaw配置成功."
+
+          - FeishuRobotAppId:
+              Ref: FeishuRobotAppId
+            FeishuRobotAppSecret:
+              Ref: FeishuRobotAppSecret
   GetURLByRunCommand:
     Type: ALIYUN::ECS::RunCommand
     Properties:
@@ -570,6 +724,12 @@ Metadata:
           - EnableEnterpriseWeChatRobot
           - EnterpriseWeChatRobotToken
           - EnterpriseWeChatRobotEncodingAESKey
+          - EnableQQRobot
+          - QQRobotAppId
+          - QQRobotClientSecret
+          - EnableFeishuRobot
+          - FeishuRobotAppId
+          - FeishuRobotAppSecret
         Label:
           default: 服务配置
       - Parameters:
