@@ -1,0 +1,60 @@
+FormatVersion: OOS-2019-06-01
+Parameters:
+  regionId:
+    Type: String
+    Label:
+      en: RegionId
+      zh-cn: 地域ID
+    AssociationProperty: RegionId
+    Default: '{{ ACS::RegionId }}'
+  targets:
+    Type: Json
+    Label:
+      en: TargetInstance
+      zh-cn: 目标实例
+    AssociationProperty: Targets
+    AssociationPropertyMetadata:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: regionId
+  BaiLianApiKey:
+    NoEcho: true
+    Type: String
+    Label:
+      zh-cn: 百炼 Coding Plan API-KEY
+      en: BaiLian Coding Plan API-KEY
+Tasks:
+  - Name: getInstance
+    Description:
+      en: Views the ECS instances
+      zh-cn: 获取ECS实例
+    Action: ACS::SelectTargets
+    Properties:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: '{{ regionId }}'
+      Filters:
+        - '{{ targets }}'
+    Outputs:
+      InstanceId:
+        Type: String
+        ValueSelector: Instances.Instance[].InstanceId
+      OSType:
+        Type: String
+        ValueSelector: Instances.Instance[].OSType
+  - Name: ConfigServiceByRunCommand
+    When:
+      Fn::Equals:
+        - '{{ getInstance.OSType }}'
+        - linux
+    Action: ACS::ECS::RunCommand
+    Description:
+      en: Config service by run command
+      zh-cn: 通过执行命令配置服务
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      commandContent: |-
+        #!/bin/bash
+        sh /opt/.swas/run-cmd.sh config "{{BaiLianApiKey}}" "domestic" > /dev/null
+        sh /opt/.swas/run-cmd.sh restart
+        sleep 10

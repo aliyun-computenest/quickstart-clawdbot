@@ -1,0 +1,210 @@
+FormatVersion: OOS-2019-06-01
+Description:
+  name-en: Rest Server
+  name-zh-cn: 重置服务
+Parameters:
+  Checkbox:
+    Type: String
+    Label:
+      en: Backup Instructions
+      zh-cn: 备份说明
+    AssociationProperty: AlertCheckbox
+    AssociationPropertyMetadata:
+      Description: 本操作会重置ECS系统盘，使用前请确保无重要数据或已完成数据备份，以免丢失数据。
+      ConfirmText: 我已备份完成(或无需备份)
+      Alert: true
+      Type: warning
+      MustChecked: true
+  regionId:
+    Type: String
+    Label:
+      en: RegionId
+      zh-cn: 地域ID
+    AssociationProperty: RegionId
+    Default: '{{ ACS::RegionId }}'
+  targets:
+    Type: Json
+    Label:
+      en: TargetInstance
+      zh-cn: 目标实例
+    AssociationProperty: Targets
+    AssociationPropertyMetadata:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: regionId
+  instancePassword:
+    Type: String
+    Label:
+      en: ECS Instance Password
+      zh-cn: 实例密码
+    Description:
+      en: Server login password, Length 8-30, must contain three(Capital letters, lowercase letters, numbers, ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ Special symbol in)
+      zh-cn: 服务器登录密码,长度8-30，必须包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）
+    AssociationProperty: ALIYUN::ECS::Instance::Password
+    NoEcho: true
+  BaiLianApiKey:
+    NoEcho: true
+    Type: String
+    Description:
+      zh-cn: 开通百炼模型服务，并获得 API-KEY。请参考： <a href="https://developer.aliyun.com/article/1655158"  target="_blank">获取百炼API-KEY</a>。
+      en: 'Activate BaiLian and obtain the API-KEY. Please refer to:  <a href="https://developer.aliyun.com/article/1655158"  target="_blank">Get BaiLian API-KEY</a>.'
+    Label:
+      zh-cn: 百炼 API-KEY
+      en: BaiLian API-KEY
+    AssociationProperty: ALIYUN::Bailian::ApiKey::ApiKeyInfo
+Tasks:
+  - Name: getInstance
+    Description:
+      en: Views the ECS instances
+      zh-cn: 获取ECS实例
+    Action: ACS::SelectTargets
+    Properties:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: '{{ regionId }}'
+      Filters:
+        - '{{ targets }}'
+    Outputs:
+      InstanceId:
+        Type: String
+        ValueSelector: Instances.Instance[].InstanceId
+      OSType:
+        Type: String
+        ValueSelector: Instances.Instance[].OSType
+  - Name: GetTokenByRunCommand
+    Action: ACS::ECS::RunCommand
+    Description:
+      en: Get token by run command
+      zh-cn: 通过执行命令获取token
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      username: admin
+      workingDir: /home/admin
+      commandContent: |-
+        #!/bin/bash
+        /opt/.swas/run-cmd.sh get-token
+    Outputs:
+      Token:
+        Type: String
+        ValueSelector: invocationOutput
+  - Name: GetBasePathByRunCommand
+    Action: ACS::ECS::RunCommand
+    Description:
+      en: Get basepath by run command
+      zh-cn: 通过执行命令获取basepath
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      username: admin
+      workingDir: /home/admin
+      commandContent: |-
+        #!/bin/bash
+        CONFIG_FILE="/home/admin/.openclaw/openclaw.json"
+        jq -r '.gateway.controlUi.basePath' "$CONFIG_FILE"
+    Outputs:
+      BasePath:
+        Type: String
+        ValueSelector: invocationOutput
+  - Name: ReplaceSystemDisk
+    Action: ACS::ECS::ReplaceSystemDisk
+    Description:
+      en: Replaces the system disk of ECS instances
+      zh-cn: 更换系统盘
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      password: '{{ instancePassword }}'
+      imageId:
+        Fn::Select:
+          - '{{ regionId }}'
+          - cn-shenzhen: m-wz9j639dg2t3tv6z7b19
+            cn-beijing: m-2zegji1jkp71exng1g1x
+            cn-wulanchabu: m-0jlbef3lqczv6xbdbg9s
+            eu-west-1: m-d7ohljihj0qhwokjeey4
+            ap-northeast-2: m-mj7i9dbv33inh7y5nkza
+            ap-northeast-1: m-6we1hw8193ozzbjokaoo
+            cn-chengdu: m-2vcazt3t2beul3ohufvp
+            cn-qingdao: m-m5e9awcg4yotm1lafb3f
+            cn-wuhan-lr: m-n4a2tkmhoxoxz2d6g6rm
+            cn-shanghai: m-uf67zejrvex9bemva2du
+            cn-guangzhou: m-7xvhapz6xne8pa6ugbm8
+            cn-hongkong: m-j6chxibf0gwyh0u8utqs
+            cn-heyuan: m-f8z8wy7zxz5p6b79oq81
+            ap-southeast-1: m-t4nfm7ixu0r1078ctdlg
+            ap-southeast-3: m-8psgyncxmgaupm3rjkue
+            eu-central-1: m-gw8hmmy60mhal00wb3w3
+            cn-huhehaote: m-hp3j9hj9rdhovi2zxp3q
+            ap-southeast-5: m-k1ahd09hs25pwh50lw50
+            us-east-1: m-0xi5tpmoq7zvkfjdfga9
+            ap-southeast-6: m-5ts5qeq8bgh7zjspy6cl
+            cn-zhangjiakou: m-8vb36g3ingtiyefmmy1q
+            us-west-1: m-rj9c4jlygm0xvjdoi3ei
+            ap-southeast-7: m-0joglthla92nopscdyw3
+            cn-hangzhou: m-bp1ang9x8ao19awg7l2o
+
+  - Name: Sleep
+    Action: ACS::Sleep
+    Description:
+      en: Wait 1 minute
+      zh-cn: 等待1分钟
+    Properties:
+      Duration: PT1M
+  - Name: ConfigServiceByRunCommand
+    When:
+      Fn::Equals:
+        - '{{ getInstance.OSType }}'
+        - linux
+    Action: ACS::ECS::RunCommand
+    Description:
+      en: Config service by run command
+      zh-cn: 通过执行命令配置服务
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      commandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            NEW_PORT="18789"
+            CONFIG_FILE="/home/admin/.openclaw/openclaw.json"
+            NEW_TOKEN="${Token}"
+            BASE_PATH="${BasePath}"
+            jq --arg t "$NEW_TOKEN" '.gateway.auth.token = $t' "$CONFIG_FILE" > "${!CONFIG_FILE}.tmp" && mv "${!CONFIG_FILE}.tmp" "$CONFIG_FILE" -f
+            jq --arg t "$BASE_PATH" '.gateway.controlUi.basePath = $t' "$CONFIG_FILE" > "${!CONFIG_FILE}.tmp" && mv "${!CONFIG_FILE}.tmp" "$CONFIG_FILE" -f
+            OLD_PORT=$(jq -r '.gateway.port // empty' "$CONFIG_FILE")
+            sed -i -E -e "s|(:[[:space:]]*)$OLD_PORT([,}])|\1$NEW_PORT\2|g" -e "s|:$OLD_PORT\"|:$NEW_PORT\"|g" "$CONFIG_FILE"
+            jq --arg port "18789" '.gateway.port = ($port | tonumber)' "$CONFIG_FILE" > "${!CONFIG_FILE}.tmp" && mv "${!CONFIG_FILE}.tmp" "$CONFIG_FILE" -f
+            sh /opt/.swas/run-cmd.sh config "${BaiLianApiKey}" "domestic" > /dev/null
+            sh /opt/.swas/run-cmd.sh restart
+            sleep 10
+          - BaiLianApiKey:
+              Fn::Select:
+                - ApiKeyValue
+                - '{{BaiLianApiKey}}'
+            Token:
+              Fn::Select:
+                - 0
+                - Fn::Split:
+                    - |+
+
+                    - '{{GetTokenByRunCommand.Token}}'
+            BasePath:
+              Fn::Select:
+                - 0
+                - Fn::Split:
+                    - |+
+
+                    - '{{GetBasePathByRunCommand.BasePath}}'
+Metadata:
+  ALIYUN::OOS::Interface:
+    ParameterGroups:
+      - Parameters:
+          - regionId
+          - targets
+          - instancePassword
+        Label:
+          default:
+            zh-cn: 选择实例
+            en: Select Instances

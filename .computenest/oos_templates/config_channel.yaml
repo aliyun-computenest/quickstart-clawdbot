@@ -1,0 +1,300 @@
+FormatVersion: OOS-2019-06-01
+Parameters:
+  regionId:
+    Type: String
+    Label:
+      en: RegionId
+      zh-cn: 地域ID
+    AssociationProperty: RegionId
+    Default: '{{ ACS::RegionId }}'
+  targets:
+    Type: Json
+    Label:
+      en: TargetInstance
+      zh-cn: 目标实例
+    AssociationProperty: Targets
+    AssociationPropertyMetadata:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: regionId
+  CreateDingTalk:
+    Type: Boolean
+    Label:
+      en: Enable DingTalk application Robot
+      zh-cn: 启用钉钉机器人
+    Description:
+      en: >-
+        Please See <a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#da0b7282fc5sxe" target="_blank">How to Configure a Dingtalk App</a>
+      zh-cn: >-
+        请参考：<a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#da0b7282fc5sx" target="_blank">如何配置钉钉应用</a>
+    Default: false
+  DingTalkClientId:
+    Type: String
+    Label:
+      en: DingTalk Client ID
+      zh-cn: 钉钉 Client ID
+    Description:
+      en: >-
+        Visit the application management page of DingTalk Open Platform.
+        After selecting a specific application, select Credentials and Basic Information
+        in the left menu to view the Client ID.
+      zh-cn: >-
+        访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
+        target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
+        font-weight: bold;">凭证与基础信息</span> 查看 Client ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${CreateDingTalk}
+    Default: ''
+  DingTalkClientSecret:
+    Type: String
+    NoEcho: true
+    Label:
+      en: DingTalk Client Secret
+      zh-cn: 钉钉 Client Secret
+    Description:
+      en: >-
+        Visit the application management page of DingTalk Open Platform.
+        After selecting a specific application, select Credentials and Basic Information
+        in the left menu to view the Client Secret.
+      zh-cn: >-
+        访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
+        target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
+        font-weight: bold;">凭证与基础信息</span> 查看 Client Secret。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${CreateDingTalk}
+    Default: ''
+  EnableEnterpriseWeChatRobot:
+    Type: Boolean
+    Label:
+      en: Enable Enterprise WeChat Robot
+      zh-cn: 启用企业微信机器人
+    Default: false
+    Description:
+      en: >-
+        Please See <a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#51b34d497dyir" target="_blank">How to Configure a WeChat Work Robot</a>
+      zh-cn: >-
+        请参考：<a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#51b34d497dyir" target="_blank">如何配置企业微信机器人</a>
+  EnterpriseWeChatRobotToken:
+    Type: String
+    Label:
+      en: Enterprise WeChat Robot Token
+      zh-cn: 企业微信机器人 Token
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableEnterpriseWeChatRobot}
+    Default: ''
+  EnterpriseWeChatRobotEncodingAESKey:
+    Type: String
+    Label:
+      en: Enterprise WeChat Robot EncodingAESKey
+      zh-cn: 企业微信机器人 EncodingAESKey
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableEnterpriseWeChatRobot}
+    Default: ''
+  EnableQQRobot:
+    Type: Boolean
+    Label:
+      en: Enable QQ Robot
+      zh-cn: 启用QQ机器人
+    Default: false
+    Description:
+      en: >-
+        Please See <a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#b5add257ed0z5" target="_blank">How to Configure a QQ Robot</a>
+      zh-cn: >-
+        请参考：<a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#b5add257ed0z5" target="_blank">如何配置QQ机器人</a>
+  QQRobotAppId:
+    Type: String
+    Label:
+      en: QQ Robot App ID
+      zh-cn: QQ机器人 App ID
+    Description:
+      en: >-
+        The App ID of the QQ Robot application.
+      zh-cn: >-
+        QQ机器人应用的 App ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableQQRobot}
+    Default: ''
+  QQRobotClientSecret:
+    Type: String
+    NoEcho: true
+    Label:
+      en: QQ Robot Client Secret
+      zh-cn: QQ机器人 Client Secret
+    Description:
+      en: >-
+        The Client Secret of the QQ Robot application.
+      zh-cn: >-
+        QQ机器人应用的 Client Secret。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableQQRobot}
+    Default: ''
+  EnableFeishuRobot:
+    Type: Boolean
+    Label:
+      en: Enable Feishu Robot
+      zh-cn: 启用飞书机器人
+    Default: false
+    Description:
+      en: >-
+        Please See <a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b" target="_blank">How to Configure a Feishu Robot</a>
+      zh-cn: >-
+        请参考：<a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b" target="_blank">如何配置飞书机器人</a>
+  FeishuRobotAppId:
+    Type: String
+    Label:
+      en: Feishu Robot App ID
+      zh-cn: 飞书机器人 App ID
+    Description:
+      en: >-
+        Visit the Feishu Open Platform to create an application and obtain the App ID.
+      zh-cn: >-
+        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App ID。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableFeishuRobot}
+    Default: ''
+  FeishuRobotAppSecret:
+    Type: String
+    NoEcho: true
+    Label:
+      en: Feishu Robot App Secret
+      zh-cn: 飞书机器人 App Secret
+    Description:
+      en: >-
+        Visit the Feishu Open Platform to create an application and obtain the App Secret.
+      zh-cn: >-
+        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App Secret。
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+            - true
+            - ${EnableFeishuRobot}
+    Default: ''
+Tasks:
+  - Name: getInstance
+    Description:
+      en: Views the ECS instances
+      zh-cn: 获取ECS实例
+    Action: ACS::SelectTargets
+    Properties:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: '{{ regionId }}'
+      Filters:
+        - '{{ targets }}'
+    Outputs:
+      InstanceId:
+        Type: String
+        ValueSelector: Instances.Instance[].InstanceId
+  - Name: ConfigDingtalkByRunCommand
+    Action: ACS::ECS::RunCommand
+    When:
+        Fn::Equals:
+          - true
+          - "{{ CreateDingTalk }}"
+    Description:
+      en: Config dingtalk by run command
+      zh-cn: 通过执行命令配置钉钉应用
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      commandContent: |-
+        #!/bin/bash
+        APP_ID="{{DingTalkClientId}}"
+        APP_SECRET="{{DingTalkClientSecret}}"
+        sh /opt/.swas/run-cmd.sh set-channel dingtalk "$APP_ID" "$APP_SECRET" > /dev/null
+        sh /opt/.swas/run-cmd.sh restart
+        echo "OpenClaw配置成功."
+        sleep 10
+  - Name: ConfigWechatByRunCommand
+    Action: ACS::ECS::RunCommand
+    When:
+        Fn::Equals:
+          - true
+          - "{{ EnableEnterpriseWeChatRobot }}"
+    Description:
+      en: Config enterprise wechat by run command
+      zh-cn: 通过执行命令配置企业微信
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      commandContent: |-
+        #!/bin/bash
+        APP_ID="{{EnterpriseWeChatRobotToken}}"
+        APP_SECRET="{{EnterpriseWeChatRobotEncodingAESKey}}"
+        sh /opt/.swas/run-cmd.sh set-channel wecom "$APP_ID" "$APP_SECRET" > /dev/null
+        sh /opt/.swas/run-cmd.sh restart
+        echo "OpenClaw配置成功."
+        sleep 10
+
+  - Name: ConfigFeishuByRunCommand
+    Action: ACS::ECS::RunCommand
+    When:
+        Fn::Equals:
+          - true
+          - "{{ EnableFeishuRobot }}"
+    Description:
+      en: Config feishu by run command
+      zh-cn: 通过执行命令配置飞书
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      commandContent: |-
+        #!/bin/bash
+        APP_ID="{{FeishuRobotAppId}}"
+        APP_SECRET="{{FeishuRobotAppSecret}}"
+        sh /opt/.swas/run-cmd.sh set-channel feishu "$APP_ID" "$APP_SECRET" > /dev/null
+        sh /opt/.swas/run-cmd.sh restart
+        echo "OpenClaw配置成功."
+        sleep 10
+
+  - Name: ConfigQQByRunCommand
+    Action: ACS::ECS::RunCommand
+    When:
+        Fn::Equals:
+          - true
+          - "{{ EnableQQRobot }}"
+    Description:
+      en: Config qq by run command
+      zh-cn: 通过执行命令配置QQ
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      commandContent: |-
+        #!/bin/bash
+        APP_ID="{{QQRobotAppId}}"
+        APP_SECRET="{{QQRobotClientSecret}}"
+        sh /opt/.swas/run-cmd.sh set-channel qqbot "$APP_ID" "$APP_SECRET" > /dev/null
+        sh /opt/.swas/run-cmd.sh restart
+        echo "OpenClaw配置成功."
+        sleep 10
