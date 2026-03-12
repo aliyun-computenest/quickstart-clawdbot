@@ -285,6 +285,18 @@ sh /opt/.swas/run-cmd.sh set-channel qqbot "$APP_ID" "$APP_SECRET" > /dev/null
 sh /opt/.swas/run-cmd.sh restart
 ```
 
+## 重置配置文件
+
+使用过程中如果遇到服务无法访问，可以尝试重置配置文件。
+
+远程链接ECS实例，执行以下命令：
+```shell
+sudo su admin
+cd /home/admin/.openclaw/
+cp -f openclaw.json.bak openclaw.json 
+```
+其中`openclaw.json.bak`格式的是备份的配置文件，可以选用最新的备份进行恢复。
+
 ## 如何使用OpenClaw（Clawdbot）
 
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
