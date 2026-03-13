@@ -1,10 +1,10 @@
 # 🌟 服务简介
 
-OpenClaw（Clawdbot）是一个现代化的机器人流程自动化（RPA）平台。Moltbot 可以帮助用户自动化重复性的桌面任务，提高工作效率。OpenClaw 具有直观的用户界面和强大的自动化功能，支持多种应用场景。通过 OpenClaw，您可以轻松创建、管理和执行自动化任务，无需编程经验。它还提供了丰富的集成接口，能够与其他系统和服务无缝协作。
+OpenClaw（Clawdbot）是一个现代化的机器人流程自动化（RPA）平台。OpenClaw 可以帮助用户自动化重复性的桌面任务，提高工作效率。OpenClaw 具有直观的用户界面和强大的自动化功能，支持多种应用场景。通过 OpenClaw，您可以轻松创建、管理和执行自动化任务，无需编程经验。它还提供了丰富的集成接口，能够与其他系统和服务无缝协作。
 
 # 部署流程
 
-1. 访问计算巢OpenClaw（Clawdbot）社区版[部署链接](https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&ServiceId=service-249322bfe8c045798808)，按提示填写部署参数：
+1. 访问计算巢OpenClaw（Clawdbot）社区版[部署链接](https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&ServiceId=service-249322bfe8c045798808)，按提示填写部署参数（支持使用百炼CodingPlan）：
 
    <img src="1.jpg" alt="1" width="1000">
 2. 参数填写完成后可以看到对应询价明细，确认参数后点击 **下一步：确认订单** 。
