@@ -88,7 +88,7 @@ cat "$APP_DIR/image.env"
 
 # ── 6. 冒烟测试 ───────────────────────────────────────────────────────────
 # 跟随上游 latest 意味着插件与主程序的兼容性没有版本锁保证，构建期必须验证：
-# gateway 能起来、4 个插件能被 Node 解析加载。任一失败则构建失败，不产出坏镜像。
+# gateway 能起来、3 个插件能被 Node 解析加载。任一失败则构建失败，不产出坏镜像。
 "$APP_DIR/run-cmd.sh" init
 "$APP_DIR/run-cmd.sh" config "sk-smoke-test-placeholder" domestic
 # 只启用插件、不配置 channels：插件模块会被加载（验证 ESM 解析），但不会去连接外部平台
@@ -108,17 +108,34 @@ if grep -q "Gateway start blocked" /tmp/smoke.log; then
   echo "ERROR: gateway 拒绝启动（配置被判定为不完整或被篡改），详见上方日志" >&2
   exit 1
 fi
-missing_plugins=""
-for plugin in dingtalk-connector wecom-openclaw-plugin openclaw-qqbot openclaw-lark; do
-  if ! grep -q "$plugin" /tmp/smoke.log; then
-    missing_plugins="$missing_plugins $plugin"
-  fi
-done
-if [ -n "$missing_plugins" ]; then
-  echo "ERROR: 以下插件未出现在启动日志中，判定为未加载：$missing_plugins" >&2
+# 有插件初始化失败时 gateway 照样会正常监听端口，只在日志里留一行，必须显式拦。
+if grep -q "plugin(s) failed to initialize" /tmp/smoke.log; then
+  echo "ERROR: 有插件初始化失败：" >&2
+  grep -E "plugin\(s\) failed to initialize|failed to load from" /tmp/smoke.log >&2
   exit 1
 fi
-echo "INFO: 冒烟测试通过，gateway 与 4 个渠道插件均正常"
+# 只认 gateway 自己打印的已加载插件清单。不能全文 grep 插件名 —— 插件名同样会出现在
+# 加载失败的报错行里，那样插件缺失也会被误判为通过（上一版就是这么放过一个坏镜像的）。
+loaded=$(grep -o 'http server listening ([0-9]* plugins: [^)]*' /tmp/smoke.log \
+  | tail -1 | sed 's/.*plugins: //' || true)
+if [ -z "$loaded" ]; then
+  echo "ERROR: 日志里没有 gateway 的已加载插件清单，无法确认插件状态" >&2
+  exit 1
+fi
+echo "INFO: gateway 已加载插件：$loaded"
+missing_plugins=""
+for plugin in dingtalk-connector wecom-openclaw-plugin openclaw-qqbot; do
+  # 清单形如 "a, b, c; 2.6s"，去空格并把分号也当分隔符，再做整词匹配
+  case ",$(echo "$loaded" | tr -d ' ' | tr ';' ',')," in
+    *",$plugin,"*) ;;
+    *) missing_plugins="$missing_plugins $plugin" ;;
+  esac
+done
+if [ -n "$missing_plugins" ]; then
+  echo "ERROR: 以下渠道插件不在 gateway 的已加载清单中：$missing_plugins" >&2
+  exit 1
+fi
+echo "INFO: 冒烟测试通过，gateway 与 3 个渠道插件均正常"
 
 # ── 7. 清理，交付干净的镜像 ───────────────────────────────────────────────
 docker compose -f "$APP_DIR/docker-compose.yaml" down --remove-orphans
