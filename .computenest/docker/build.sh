@@ -114,6 +114,12 @@ if grep -q "plugin(s) failed to initialize" /tmp/smoke.log; then
   grep -E "plugin\(s\) failed to initialize|failed to load from" /tmp/smoke.log >&2
   exit 1
 fi
+# 插件的 typed hook 被拒时也只在日志里留一行，渠道看起来完全正常，同样得显式拦。
+if grep -qE 'typed hook .* blocked' /tmp/smoke.log; then
+  echo "ERROR: 有插件的 typed hook 被拒，该插件拿不到会话上下文：" >&2
+  grep -E 'typed hook .* blocked' /tmp/smoke.log >&2
+  exit 1
+fi
 # 只认 gateway 自己打印的已加载插件清单。不能全文 grep 插件名 —— 插件名同样会出现在
 # 加载失败的报错行里，那样插件缺失也会被误判为通过（上一版就是这么放过一个坏镜像的）。
 loaded=$(grep -o 'http server listening ([0-9]* plugins: [^)]*' /tmp/smoke.log \

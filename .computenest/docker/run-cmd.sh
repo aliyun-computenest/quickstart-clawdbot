@@ -202,9 +202,21 @@ plugin_of() {
   esac
 }
 
+# 插件包名 -> 需要显式授予的 hook 权限。非内置（non-bundled）插件用 typed hook 读会话
+# 上下文时必须拿到 allowConversationAccess，否则 gateway 会默默 block 掉这个 hook：
+#   typed hook "before_prompt_build" blocked because non-bundled plugins must set
+#   plugins.entries.wecom-openclaw-plugin.hooks.allowConversationAccess=true
+# 这种失败很隐蔽——渠道能正常连上、消息也能收，只是插件拿不到会话上下文。
+plugin_hooks() {
+  case "$1" in
+    wecom-openclaw-plugin) echo '{ "allowConversationAccess": true }' ;;
+    *)                     echo '{}' ;;
+  esac
+}
+
 cmd_set_channel() {
   local type="${1:-}" id="${2:-}" secret="${3:-}"
-  local block plugin
+  local block plugin hooks
   case "$type" in
     dingtalk)
       block=$(jq -n --arg id "$id" --arg secret "$secret" '{
@@ -256,11 +268,12 @@ cmd_set_channel() {
     exit 1
   fi
   plugin=$(plugin_of "$type")
+  hooks=$(plugin_hooks "$plugin")
   # 逐 key 覆盖，只更新目标渠道，已配置的其他渠道保持不变
   edit_config '
     .channels = ((.channels // {}) + $block)
-    | .plugins.entries[$plugin] = { enabled: true }
-  ' --argjson block "$block" --arg plugin "$plugin"
+    | .plugins.entries[$plugin] = ({ enabled: true } + (if $hooks == {} then {} else { hooks: $hooks } end))
+  ' --argjson block "$block" --arg plugin "$plugin" --argjson hooks "$hooks"
   echo "INFO: 渠道 ${type} 已配置（插件 ${plugin} 已启用）"
 }
 
@@ -268,7 +281,7 @@ cmd_enable_plugins() {
   edit_config '
     .plugins.entries = ((.plugins.entries // {}) + {
       "dingtalk-connector": { enabled: true },
-      "wecom-openclaw-plugin": { enabled: true },
+      "wecom-openclaw-plugin": { enabled: true, hooks: { allowConversationAccess: true } },
       "openclaw-qqbot": { enabled: true }
     })
   '
