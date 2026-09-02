@@ -1,812 +1,946 @@
-ROSTemplateFormatVersion: '2015-09-01'
+ROSTemplateFormatVersion: "2015-09-01"
 Description:
-  en: DockerCompose service template
-  zh-cn: DockerCompose服务模板
+  en: "DockerCompose service template"
+  zh-cn: "DockerCompose服务模板"
 Locals:
   CurTime:
-    Type: Eval
+    Type: "Eval"
     Value:
       Fn::FormatTime:
-        - '%Y%m%d-%H%M%S'
-        - Asia/Shanghai
+      - "%Y%m%d-%H%M%S"
+      - "Asia/Shanghai"
 Conditions:
   CreateVpcConditions:
     Fn::Equals:
-      - NewVPC
-      - Ref: VpcOption
+    - "NewVPC"
+    - Ref: "VpcOption"
   EnablePublicIpConditions:
     Fn::Equals:
-      - true
-      - Ref: EnablePublicIp
+    - true
+    - Ref: "EnablePublicIp"
   CreateDingTalkConditions:
     Fn::Equals:
-      - true
-      - Ref: CreateDingTalk
+    - true
+    - Ref: "CreateDingTalk"
   EnableEnterpriseWeChatRobotConditions:
     Fn::Equals:
-      - true
-      - Ref: EnableEnterpriseWeChatRobot
+    - true
+    - Ref: "EnableEnterpriseWeChatRobot"
   EnableQQRobotConditions:
     Fn::Equals:
-      - true
-      - Ref: EnableQQRobot
+    - true
+    - Ref: "EnableQQRobot"
   EnableFeishuRobotConditions:
     Fn::Equals:
+    - true
+    - Ref: "EnableFeishuRobot"
+  CreateSkills:
+    Fn::Equals:
+    - Ref: "CreateSkillsOption"
+    - true
+  CreateSkillSpaceName:
+    Fn::And:
+    - Fn::Equals:
+      - Ref: "CreateSkillsOption"
       - true
-      - Ref: EnableFeishuRobot
+    - Fn::Not:
+        Fn::Equals:
+        - Fn::Jq:
+          - "First"
+          - "if type==\"object\" then (.SkillSpaceName // \"\") else \"\" end"
+          - Ref: "SkillsInfo"
+        - ""
+  BindConnectionIds:
+    Fn::Not:
+      Fn::Equals:
+      - Ref: "ConnectionIds"
+      - []
 Parameters:
+  ApplicationName:
+    Type: "String"
+    Label:
+      zh-cn: "Agent应用名称"
+      en: "Agent Application Name"
+    Default: ""
+  ApplicationGroupName:
+    Type: "String"
+    Label:
+      en: "Application Group Name"
+      zh-cn: "应用分组名称"
+    Default: ""
+  Description:
+    Type: "String"
+    Label: "描述"
+    Description: "当前部署物版本的描述"
+    Default: ""
   VpcOption:
-    Type: String
+    Type: "String"
     AllowedValues:
-      - NewVPC
-      - ExistingVPC
+    - "NewVPC"
+    - "ExistingVPC"
     AssociationPropertyMetadata:
       ValueLabelMapping:
         NewVPC:
-          zh-cn: 新建专有网络
-          en: New VPC
+          zh-cn: "新建专有网络"
+          en: "New VPC"
         ExistingVPC:
-          zh-cn: 已有专有网络
-          en: Existing VPC
+          zh-cn: "已有专有网络"
+          en: "Existing VPC"
     Label:
-      en: Select Existing or New VPC
-      zh-cn: 选择已有/新建的专有网络
+      en: "Select Existing or New VPC"
+      zh-cn: "选择已有/新建的专有网络"
     Required: true
-    Default: NewVPC
+    Default: "NewVPC"
   VpcCidrBlock:
-    Type: String
+    Type: "String"
     Label:
-      en: VPC CIDR IPv4 Block
-      zh-cn: 专有网络IPv4网段
+      en: "VPC CIDR IPv4 Block"
+      zh-cn: "专有网络IPv4网段"
     Description:
-      zh-cn: VPC的ip地址段范围，<br>您可以使用以下的ip地址段或其子网:<br><font color='green'>[10.0.0.0/8]</font><br><font color='green'>[172.16.0.0/12]</font><br><font color='green'>[192.168.0.0/16]</font>
-      en: 'The ip address range of the VPC in the CidrBlock form; <br>You can use the following ip address ranges and their subnets: <br><font color=''green''>[10.0.0.0/8]</font><br><font color=''green''>[172.16.0.0/12]</font><br><font color=''green''>[192.168.0.0/16]</font>'
-    Default: 192.168.0.0/16
+      zh-cn: "VPC的ip地址段范围，<br>您可以使用以下的ip地址段或其子网:<br><font color='green'>[10.0.0.0/8]</font><br><font color='green'>[172.16.0.0/12]</font><br><font color='green'>[192.168.0.0/16]</font>"
+      en: "The ip address range of the VPC in the CidrBlock form; <br>You can use the following ip address ranges and their subnets: <br><font color='green'>[10.0.0.0/8]</font><br><font color='green'>[172.16.0.0/12]</font><br><font color='green'>[192.168.0.0/16]</font>"
+    Default: "192.168.0.0/16"
     Required:
       Fn::Equals:
-        - NewVPC
-        - ${VpcOption}
-    AssociationProperty: ALIYUN::VPC::VPC::CidrBlock
+      - "NewVPC"
+      - "${VpcOption}"
+    AssociationProperty: "ALIYUN::VPC::VPC::CidrBlock"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - NewVPC
-            - ${VpcOption}
+          - "NewVPC"
+          - "${VpcOption}"
   VSwitchCidrBlock:
-    Type: String
+    Type: "String"
     Label:
-      en: VSwitch CIDR Block
-      zh-cn: 交换机子网网段
+      en: "VSwitch CIDR Block"
+      zh-cn: "交换机子网网段"
     Description:
-      zh-cn: 必须属于VPC的子网段。
-      en: Must belong to the subnet segment of VPC.
-    Default: 192.168.1.0/24
+      zh-cn: "必须属于VPC的子网段。"
+      en: "Must belong to the subnet segment of VPC."
+    Default: "192.168.1.0/24"
     Required:
       Fn::Equals:
-        - NewVPC
-        - ${VpcOption}
-    AssociationProperty: ALIYUN::VPC::VSwitch::CidrBlock
+      - "NewVPC"
+      - "${VpcOption}"
+    AssociationProperty: "ALIYUN::VPC::VSwitch::CidrBlock"
     AssociationPropertyMetadata:
-      VpcCidrBlock: VpcCidrBlock
+      VpcCidrBlock: "VpcCidrBlock"
       Visible:
         Condition:
           Fn::Equals:
-            - NewVPC
-            - ${VpcOption}
+          - "NewVPC"
+          - "${VpcOption}"
   PayType:
-    Type: String
+    Type: "String"
     Label:
-      en: ECS Instance Charge Type
-      zh-cn: 付费类型
-    Default: PostPaid
+      en: "ECS Instance Charge Type"
+      zh-cn: "付费类型"
+    Default: "PostPaid"
     AllowedValues:
-      - PostPaid
-      - PrePaid
-    AssociationProperty: ChargeType
+    - "PostPaid"
+    - "PrePaid"
+    AssociationProperty: "ChargeType"
     AssociationPropertyMetadata:
-      LocaleKey: InstanceChargeType
+      LocaleKey: "InstanceChargeType"
   PayPeriodUnit:
-    Type: String
+    Type: "String"
     Label:
-      en: Pay Period Unit
-      zh-cn: 购买资源时长周期
-    Default: Month
+      en: "Pay Period Unit"
+      zh-cn: "购买资源时长周期"
+    Default: "Month"
     AllowedValues:
-      - Month
-      - Year
-    AssociationProperty: PayPeriodUnit
+    - "Month"
+    - "Year"
+    AssociationProperty: "PayPeriodUnit"
     AssociationPropertyMetadata:
       ValueLabelMapping:
-        Month: 月
+        Month: "月"
       Visible:
         Condition:
           Fn::Not:
             Fn::Equals:
-              - ${PayType}
-              - PostPaid
+            - "${PayType}"
+            - "PostPaid"
   PayPeriod:
-    Type: Number
+    Type: "Number"
     Label:
-      en: Period
-      zh-cn: 购买资源时长
+      en: "Period"
+      zh-cn: "购买资源时长"
     Default: 1
     AllowedValues:
-      - 1
-      - 2
-      - 3
-      - 4
-      - 5
-      - 6
-      - 7
-      - 8
-      - 9
-    AssociationProperty: PayPeriod
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    AssociationProperty: "PayPeriod"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Not:
             Fn::Equals:
-              - ${PayType}
-              - PostPaid
+            - "${PayType}"
+            - "PostPaid"
   EcsInstanceType:
-    Type: String
+    Type: "String"
     Label:
-      en: Instance Type
-      zh-cn: 实例类型
-    AssociationProperty: ALIYUN::ECS::Instance::InstanceType
+      en: "Instance Type"
+      zh-cn: "实例类型"
+    AssociationProperty: "ALIYUN::ECS::Instance::InstanceType"
     AssociationPropertyMetadata:
-      InstanceChargeType: ${PayType}
+      InstanceChargeType: "${PayType}"
       Constraints:
         InstanceTypeFamily:
-          - ecs.u1
-          - ecs.e
-          - ecs.u2a
-          - ecs.u2i
+        - "ecs.u1"
+        - "ecs.e"
+        - "ecs.u2a"
+        - "ecs.u2i"
     AllowedValues:
-      - ecs.e-c1m1.large
-      - ecs.e-c1m2.large
-      - ecs.e-c1m1.xlarge
-      - ecs.e-c1m2.xlarge
-      - ecs.u2a-c1m2.xlarge
-      - ecs.u2i-c1m1.large
-      - ecs.u2i-c1m2.large
-      - ecs.u2i-c1m4.large
-      - ecs.u2i-c1m8.large
-      - ecs.u2i-c1m1.xlarge
-      - ecs.u2i-c1m2.xlarge
-      - ecs.u2i-c1m4.xlarge
-      - ecs.u2i-c1m8.xlarge
-      - ecs.u2i-c1m1.2xlarge
-      - ecs.u2i-c1m2.2xlarge
-
+    - "ecs.e-c1m1.large"
+    - "ecs.e-c1m2.large"
+    - "ecs.e-c1m1.xlarge"
+    - "ecs.e-c1m2.xlarge"
+    - "ecs.u2a-c1m2.xlarge"
+    - "ecs.u2i-c1m1.large"
+    - "ecs.u2i-c1m2.large"
+    - "ecs.u2i-c1m4.large"
+    - "ecs.u2i-c1m8.large"
+    - "ecs.u2i-c1m1.xlarge"
+    - "ecs.u2i-c1m2.xlarge"
+    - "ecs.u2i-c1m4.xlarge"
+    - "ecs.u2i-c1m8.xlarge"
+    - "ecs.u2i-c1m1.2xlarge"
+    - "ecs.u2i-c1m2.2xlarge"
   InstancePassword:
     NoEcho: true
-    Type: String
+    Type: "String"
     Description:
-      en: Server login password, Length 8-30, must contain three(Capital letters, lowercase letters, numbers, ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ Special symbol in)
-      zh-cn: 服务器登录密码,长度8-30，必须包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）
-    AllowedPattern: '^[a-zA-Z0-9-\(\)\`\~\!\@\#\$\%\^\&\*\_\-\+\=\|\{\}\[\]\:\;\<\>\,\.\?\/]*$'
+      en: "Server login password, Length 8-30, must contain three(Capital letters, lowercase letters, numbers, ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ Special symbol in)"
+      zh-cn: "服务器登录密码,长度8-30，必须包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）"
+    AllowedPattern: "^[a-zA-Z0-9-\\(\\)\\`\\~\\!\\@\\#\\$\\%\\^\\&\\*\\_\\-\\+\\=\\|\\{\\}\\[\\]\\:\\;\\<\\>\\,\\.\\?\\/]*$"
     Label:
-      en: Instance Password
-      zh-cn: 实例密码
+      en: "Instance Password"
+      zh-cn: "实例密码"
     ConstraintDescription:
-      en: Length 8-30, must contain three(Capital letters, lowercase letters, numbers, ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ Special symbol in)
-      zh-cn: 长度8-30，必须包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）
+      en: "Length 8-30, must contain three(Capital letters, lowercase letters, numbers, ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ Special symbol in)"
+      zh-cn: "长度8-30，必须包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）"
     MinLength: 8
     MaxLength: 30
-    AssociationProperty: ALIYUN::ECS::Instance::Password
+    AssociationProperty: "ALIYUN::ECS::Instance::Password"
   InternetChargeType:
-    Type: String
+    Type: "String"
     Label:
-      zh-cn: 带宽付费类型
-      en: Internet Charge Type
+      zh-cn: "带宽付费类型"
+      en: "Internet Charge Type"
     AssociationPropertyMetadata:
       ValueLabelMapping:
-        PayByTraffic: 按流量计费
-        PayByBandwidth: 按固定带宽计费
+        PayByTraffic: "按流量计费"
+        PayByBandwidth: "按固定带宽计费"
     AllowedValues:
-      - PayByBandwidth
-      - PayByTraffic
-    Default: PayByTraffic
+    - "PayByBandwidth"
+    - "PayByTraffic"
+    Default: "PayByTraffic"
   EnablePublicIp:
-    Type: Boolean
+    Type: "Boolean"
     Label:
-      en: Whether Enable Public IP
-      zh-cn: 是否开启公网IP
+      en: "Whether Enable Public IP"
+      zh-cn: "是否开启公网IP"
     Default: true
   ZoneId:
-    Type: String
+    Type: "String"
     Label:
-      en: Zone ID
-      zh-cn: 可用区ID
-    AssociationProperty: ALIYUN::ECS::Instance::ZoneId
+      en: "Zone ID"
+      zh-cn: "可用区ID"
+    AssociationProperty: "ALIYUN::ECS::Instance::ZoneId"
   VpcId:
-    Type: String
+    Type: "String"
     Label:
-      en: VPC ID
-      zh-cn: 专有网络VPC实例ID
-    AssociationProperty: 'ALIYUN::ECS::VPC::VPCId'
+      en: "VPC ID"
+      zh-cn: "专有网络VPC实例ID"
+    AssociationProperty: "ALIYUN::ECS::VPC::VPCId"
     Required:
       Fn::Equals:
-        - ExistingVPC
-        - ${VpcOption}
-    Default: ''
+      - "ExistingVPC"
+      - "${VpcOption}"
+    Default: ""
     AssociationPropertyMetadata:
       AutoSelectFirst: true
       Visible:
         Condition:
           Fn::Equals:
-            - ExistingVPC
-            - ${VpcOption}
+          - "ExistingVPC"
+          - "${VpcOption}"
   VSwitchId:
-    Type: String
+    Type: "String"
     Label:
-      en: VSwitch ID
-      zh-cn: 交换机实例ID
-    Default: ''
+      en: "VSwitch ID"
+      zh-cn: "交换机实例ID"
+    Default: ""
     Required:
       Fn::Equals:
-        - ExistingVPC
-        - ${VpcOption}
-    AssociationProperty: 'ALIYUN::ECS::VSwitch::VSwitchId'
+      - "ExistingVPC"
+      - "${VpcOption}"
+    AssociationProperty: "ALIYUN::ECS::VSwitch::VSwitchId"
     AssociationPropertyMetadata:
       AutoSelectFirst: true
-      VpcId: ${VpcId}
-      ZoneId: ${ZoneId}
+      VpcId: "${VpcId}"
+      ZoneId: "${ZoneId}"
       Visible:
         Condition:
           Fn::Equals:
-            - ExistingVPC
-            - ${VpcOption}
+          - "ExistingVPC"
+          - "${VpcOption}"
   BaiLianApiKey:
     NoEcho: true
-    Type: String
+    Type: "String"
     Description:
-      zh-cn: 开通百炼模型服务，并获得 API-KEY。请参考： <a href="https://developer.aliyun.com/article/1655158"  target="_blank">获取百炼API-KEY</a>。
-      en: 'Activate BaiLian and obtain the API-KEY. Please refer to:  <a href="https://developer.aliyun.com/article/1655158"  target="_blank">Get BaiLian API-KEY</a>.'
+      zh-cn: "开通百炼模型服务，并获得 API-KEY。请参考： <a href=\"https://developer.aliyun.com/article/1655158\"  target=\"_blank\">获取百炼API-KEY</a>。"
+      en: "Activate BaiLian and obtain the API-KEY. Please refer to:  <a href=\"https://developer.aliyun.com/article/1655158\"  target=\"_blank\">Get BaiLian API-KEY</a>."
     Label:
-      zh-cn: 百炼 API-KEY
-      en: BaiLian API-KEY
-    AssociationProperty: ALIYUN::Bailian::ApiKey::ApiKeyInfo
+      zh-cn: "百炼 API-KEY"
+      en: "BaiLian API-KEY"
+    AssociationProperty: "ALIYUN::Bailian::ApiKey::ApiKeyInfo"
+    AssociationPropertyMetadata:
+      SupportCodingPlan: true
   CreateDingTalk:
-    Type: Boolean
+    Type: "Boolean"
     Label:
-      en: Enable DingTalk application link Moltbot
-      zh-cn: 启用钉钉应用连接 Moltbot
+      en: "Enable DingTalk application Robot"
+      zh-cn: "启用钉钉机器人"
     Description:
-      en: >-
-        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a Dingtalk App</a>
-      zh-cn: >-
-        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置钉钉应用</a>
+      en: "Please See <a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#da0b7282fc5sxe\" target=\"_blank\">How to Configure a Dingtalk App</a>"
+      zh-cn: "请参考：<a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#da0b7282fc5sx\" target=\"_blank\">如何配置钉钉应用</a>"
     Default: false
   DingTalkClientId:
-    Type: String
+    Type: "String"
     Label:
-      en: DingTalk Client ID
-      zh-cn: 钉钉 Client ID
+      en: "DingTalk Client ID"
+      zh-cn: "钉钉 Client ID"
     Description:
-      en: >-
-        Visit the application management page of DingTalk Open Platform.
-        After selecting a specific application, select Credentials and Basic Information
-        in the left menu to view the Client ID.
-      zh-cn: >-
-        访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
-        target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
-        font-weight: bold;">凭证与基础信息</span> 查看 Client ID。
+      en: "Visit the application management page of DingTalk Open Platform. After selecting a specific application, select Credentials and Basic Information in the left menu to view the Client ID."
+      zh-cn: "访问<a href=\"https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app\" target=\"_blank\">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style=\"color: black; font-weight: bold;\">凭证与基础信息</span> 查看 Client ID。"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${CreateDingTalk}
-    Default: ''
+          - true
+          - "${CreateDingTalk}"
+    Default: ""
   DingTalkClientSecret:
-    Type: String
+    Type: "String"
     NoEcho: true
     Label:
-      en: DingTalk Client Secret
-      zh-cn: 钉钉 Client Secret
+      en: "DingTalk Client Secret"
+      zh-cn: "钉钉 Client Secret"
     Description:
-      en: >-
-        Visit the application management page of DingTalk Open Platform.
-        After selecting a specific application, select Credentials and Basic Information
-        in the left menu to view the Client Secret.
-      zh-cn: >-
-        访问<a href="https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app"
-        target="_blank">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style="color: black;
-        font-weight: bold;">凭证与基础信息</span> 查看 Client Secret。
+      en: "Visit the application management page of DingTalk Open Platform. After selecting a specific application, select Credentials and Basic Information in the left menu to view the Client Secret."
+      zh-cn: "访问<a href=\"https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app\" target=\"_blank\">钉钉开放平台的应用管理</a>页面，选择具体的应用后，在左侧菜单选择 <span style=\"color: black; font-weight: bold;\">凭证与基础信息</span> 查看 Client Secret。"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${CreateDingTalk}
-    Default: ''
+          - true
+          - "${CreateDingTalk}"
+    Default: ""
   EnableEnterpriseWeChatRobot:
-    Type: Boolean
+    Type: "Boolean"
     Label:
-      en: Enable Enterprise WeChat Robot
-      zh-cn: 启用企业微信机器人
+      en: "Enable Enterprise WeChat Robot"
+      zh-cn: "启用企业微信机器人"
     Default: false
     Description:
-      en: >-
-        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a WeChat Work Robot</a>
-      zh-cn: >-
-        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置企业微信机器人</a>
+      en: "Please See <a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#51b34d497dyir\" target=\"_blank\">How to Configure a WeChat Work Robot</a>"
+      zh-cn: "请参考：<a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#51b34d497dyir\" target=\"_blank\">如何配置企业微信机器人</a>"
   EnterpriseWeChatRobotToken:
-    Type: String
+    Type: "String"
     Label:
-      en: Enterprise WeChat Robot Token
-      zh-cn: 企业微信机器人 Token
+      en: "Enterprise WeChat Robot Token"
+      zh-cn: "企业微信机器人 Token"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${EnableEnterpriseWeChatRobot}
-    Default: ''
+          - true
+          - "${EnableEnterpriseWeChatRobot}"
+    Default: ""
   EnterpriseWeChatRobotEncodingAESKey:
-    Type: String
+    Type: "String"
     Label:
-      en: Enterprise WeChat Robot EncodingAESKey
-      zh-cn: 企业微信机器人 EncodingAESKey
+      en: "Enterprise WeChat Robot EncodingAESKey"
+      zh-cn: "企业微信机器人 EncodingAESKey"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${EnableEnterpriseWeChatRobot}
-    Default: ''
+          - true
+          - "${EnableEnterpriseWeChatRobot}"
+    Default: ""
   EnableQQRobot:
-    Type: Boolean
+    Type: "Boolean"
     Label:
-      en: Enable QQ Robot
-      zh-cn: 启用QQ机器人
+      en: "Enable QQ Robot"
+      zh-cn: "启用QQ机器人"
     Default: false
     Description:
-      en: >-
-        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a QQ Robot</a>
-      zh-cn: >-
-        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置QQ机器人</a>
+      en: "Please See <a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#b5add257ed0z5\" target=\"_blank\">How to Configure a QQ Robot</a>"
+      zh-cn: "请参考：<a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#b5add257ed0z5\" target=\"_blank\">如何配置QQ机器人</a>"
   QQRobotAppId:
-    Type: String
+    Type: "String"
     Label:
-      en: QQ Robot App ID
-      zh-cn: QQ机器人 App ID
+      en: "QQ Robot App ID"
+      zh-cn: "QQ机器人 App ID"
     Description:
-      en: >-
-        The App ID of the QQ Robot application.
-      zh-cn: >-
-        QQ机器人应用的 App ID。
+      en: "The App ID of the QQ Robot application."
+      zh-cn: "QQ机器人应用的 App ID。"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${EnableQQRobot}
-    Default: ''
+          - true
+          - "${EnableQQRobot}"
+    Default: ""
   QQRobotClientSecret:
-    Type: String
+    Type: "String"
     NoEcho: true
     Label:
-      en: QQ Robot Client Secret
-      zh-cn: QQ机器人 Client Secret
+      en: "QQ Robot Client Secret"
+      zh-cn: "QQ机器人 Client Secret"
     Description:
-      en: >-
-        The Client Secret of the QQ Robot application.
-      zh-cn: >-
-        QQ机器人应用的 Client Secret。
+      en: "The Client Secret of the QQ Robot application."
+      zh-cn: "QQ机器人应用的 Client Secret。"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${EnableQQRobot}
-    Default: ''
+          - true
+          - "${EnableQQRobot}"
+    Default: ""
   EnableFeishuRobot:
-    Type: Boolean
+    Type: "Boolean"
     Label:
-      en: Enable Feishu Robot
-      zh-cn: 启用飞书机器人
+      en: "Enable Feishu Robot"
+      zh-cn: "启用飞书机器人"
     Default: false
     Description:
-      en: >-
-        Please See <a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">How to Configure a Feishu Robot</a>
-      zh-cn: >-
-        请参考：<a href="https://computenest.console.aliyun.com/service/detail/cn-hangzhou/service-249322bfe8c045798808?isInstance=true" target="_blank">如何配置飞书机器人</a>
+      en: "Please See <a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b\" target=\"_blank\">How to Configure a Feishu Robot</a>"
+      zh-cn: "请参考：<a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b\" target=\"_blank\">如何配置飞书机器人</a>"
   FeishuRobotAppId:
-    Type: String
+    Type: "String"
     Label:
-      en: Feishu Robot App ID
-      zh-cn: 飞书机器人 App ID
+      en: "Feishu Robot App ID"
+      zh-cn: "飞书机器人 App ID"
     Description:
-      en: >-
-        Visit the Feishu Open Platform to create an application and obtain the App ID.
-      zh-cn: >-
-        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App ID。
+      en: "Visit the Feishu Open Platform to create an application and obtain the App ID."
+      zh-cn: "访问<a href=\"https://open.feishu.cn/app\" target=\"_blank\">飞书开放平台</a>创建应用后获取 App ID。"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${EnableFeishuRobot}
-    Default: ''
+          - true
+          - "${EnableFeishuRobot}"
+    Default: ""
   FeishuRobotAppSecret:
-    Type: String
+    Type: "String"
     NoEcho: true
     Label:
-      en: Feishu Robot App Secret
-      zh-cn: 飞书机器人 App Secret
+      en: "Feishu Robot App Secret"
+      zh-cn: "飞书机器人 App Secret"
     Description:
-      en: >-
-        Visit the Feishu Open Platform to create an application and obtain the App Secret.
-      zh-cn: >-
-        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App Secret。
+      en: "Visit the Feishu Open Platform to create an application and obtain the App Secret."
+      zh-cn: "访问<a href=\"https://open.feishu.cn/app\" target=\"_blank\">飞书开放平台</a>创建应用后获取 App Secret。"
     AssociationPropertyMetadata:
       Visible:
         Condition:
           Fn::Equals:
-            - true
-            - ${EnableFeishuRobot}
-    Default: ''
+          - true
+          - "${EnableFeishuRobot}"
+    Default: ""
+  CreateSkillsOption:
+    Type: "Boolean"
+    Default: false
+    Label:
+      en: "Create Skills Option"
+      zh-cn: "启用Skills"
+  SkillsInfo:
+    Type: "Json"
+    Default: ""
+    Label:
+      zh-cn: "Skills信息"
+      en: "SkillsInfo"
+    Description:
+      zh-cn: "选择要安装的 Skill。"
+      en: "Select Skills to install."
+    AssociationProperty: "ALIYUN::ComputeNest::Skills::SkillsInfo"
+    AssociationPropertyMetadata:
+      Visible:
+        Condition:
+          Fn::Equals:
+          - "${CreateSkillsOption}"
+          - true
+  ConnectionIds:
+    Type: "Json"
+    Label:
+      zh-cn: "应用连接"
+      en: "ApplicationManagerConnection"
+    AssociationProperty: "ALIYUN::ApplicationManager::Connection"
+    AssociationPropertyMetadata:
+      VpcOption: "${VpcOption}"
+      VpcId: "${VpcId}"
+      ShowConnectionCategories: "[{\"ConnectionCategory\":\"Credential\"}]"
+      ForceShowCredential:
+        Condition:
+          Fn::Not:
+            Fn::Equals:
+            - Fn::Select:
+              - "${SkillsInfo}"
+              - "SkillSpaceName"
+            - ""
+      Visible:
+        Condition:
+          Fn::Not:
+            Fn::Equals:
+            - Fn::Select:
+              - "${SkillsInfo}"
+              - "SkillSpaceName"
+            - ""
+    Default: []
 Resources:
-  # 新建vpc
   EcsVpc:
-    Type: ALIYUN::ECS::VPC
-    Condition: CreateVpcConditions
+    Type: "ALIYUN::ECS::VPC"
+    Condition: "CreateVpcConditions"
     Properties:
       VpcName:
-        Ref: ALIYUN::StackName
+        Ref: "ALIYUN::StackName"
       CidrBlock:
-        Ref: VpcCidrBlock
-  # 新建vswitch
+        Ref: "VpcCidrBlock"
   EcsVSwitch:
-    Condition: CreateVpcConditions
-    Type: ALIYUN::ECS::VSwitch
+    Condition: "CreateVpcConditions"
+    Type: "ALIYUN::ECS::VSwitch"
     Properties:
       VSwitchName:
-        Ref: ALIYUN::StackName
+        Ref: "ALIYUN::StackName"
       VpcId:
-        Ref: EcsVpc
+        Ref: "EcsVpc"
       ZoneId:
-        Ref: ZoneId
+        Ref: "ZoneId"
       CidrBlock:
-        Ref: VSwitchCidrBlock
+        Ref: "VSwitchCidrBlock"
   SecurityGroup:
-    Type: ALIYUN::ECS::SecurityGroup
+    Type: "ALIYUN::ECS::SecurityGroup"
     Properties:
       SecurityGroupName:
-        Ref: ALIYUN::StackName
+        Ref: "ALIYUN::StackName"
       VpcId:
         Fn::If:
-          - CreateVpcConditions
-          - Ref: EcsVpc
-          - Ref: VpcId
+        - "CreateVpcConditions"
+        - Ref: "EcsVpc"
+        - Ref: "VpcId"
       SecurityGroupIngress:
-        - PortRange: 22/22
-          Priority: 1
-          SourceCidrIp: 0.0.0.0/0
-          IpProtocol: tcp
-          NicType: internet
-        - PortRange: 18789/18790
-          Priority: 1
-          SourceCidrIp: 0.0.0.0/0
-          IpProtocol: tcp
-          NicType: internet
+      - PortRange: "22/22"
+        Priority: 1
+        SourceCidrIp: "0.0.0.0/0"
+        IpProtocol: "tcp"
+        NicType: "internet"
+      - PortRange: "18789/18790"
+        Priority: 1
+        SourceCidrIp: "0.0.0.0/0"
+        IpProtocol: "tcp"
+        NicType: "internet"
   InstanceGroup:
-    Type: ALIYUN::ECS::InstanceGroup
+    Type: "ALIYUN::ECS::InstanceGroup"
     Properties:
-      # 付费类型
       InstanceChargeType:
-        Ref: PayType
+        Ref: "PayType"
       PeriodUnit:
-        Ref: PayPeriodUnit
+        Ref: "PayPeriodUnit"
       Period:
-        Ref: PayPeriod
+        Ref: "PayPeriod"
       VpcId:
         Fn::If:
-          - CreateVpcConditions
-          - Ref: EcsVpc
-          - Ref: VpcId
+        - "CreateVpcConditions"
+        - Ref: "EcsVpc"
+        - Ref: "VpcId"
       VSwitchId:
-        'Fn::If':
-          - CreateVpcConditions
-          - Ref: EcsVSwitch
-          - Ref: VSwitchId
+        Fn::If:
+        - "CreateVpcConditions"
+        - Ref: "EcsVSwitch"
+        - Ref: "VSwitchId"
       ZoneId:
-        Ref: ZoneId
+        Ref: "ZoneId"
       SecurityGroupId:
-        Ref: SecurityGroup
-      ImageId: m-j6c6qq3wujq6zyx87kh4
+        Ref: "SecurityGroup"
+      ImageId: "openclaw_docker_image"
       Password:
-        Ref: InstancePassword
+        Ref: "InstancePassword"
       InstanceType:
-        Ref: EcsInstanceType
-      SystemDiskCategory: cloud_essd_entry
+        Ref: "EcsInstanceType"
+      SystemDiskCategory: "cloud_essd_entry"
       SystemDiskSize: 40
       InternetMaxBandwidthOut:
         Fn::If:
-          - EnablePublicIpConditions
-          - 3
-          - 0
-      IoOptimized: optimized
+        - "EnablePublicIpConditions"
+        - 3
+        - 0
+      IoOptimized: "optimized"
       MaxAmount: 1
       InternetChargeType:
-        Ref: InternetChargeType
+        Ref: "InternetChargeType"
+  ConnectionBind:
+    Condition: "BindConnectionIds"
+    Type: "ALIYUN::OOS::ApplicationConnectionBind"
+    Properties:
+      ConnectionIds:
+        Fn::Jq:
+        - "First"
+        - "[.[] | .ConnectionId]"
+        - Ref: "ConnectionIds"
+      Parameters:
+        Fn::Jq:
+        - "First"
+        - "[.[] | select(.Parameters != null and (.Parameters | length) > 0) | .Parameters[]]"
+        - Ref: "ConnectionIds"
+      ApplicationName:
+        Ref: "ApplicationName"
+      ApplicationGroupName:
+        Ref: "ApplicationGroupName"
+  AccessKeyIdDataSource:
+    Condition: "CreateSkillSpaceName"
+    Type: "DATASOURCE::OOS::Parameter"
+    DependsOn:
+    - "ConnectionBind"
+    Properties:
+      Name:
+        Fn::Join:
+        - ""
+        - - Fn::Sub:
+            - "applicationManagement/codeDeploy/${applicationName}/${applicationGroupName}/"
+            - applicationName:
+                Ref: "ApplicationName"
+              applicationGroupName:
+                Ref: "ApplicationGroupName"
+          - "ALIBABA_CLOUD_ACCESS_KEY_ID"
+  AccessKeySecretDataSource:
+    Condition: "CreateSkillSpaceName"
+    Type: "DATASOURCE::OOS::Parameter"
+    DependsOn:
+    - "ConnectionBind"
+    Properties:
+      Name:
+        Fn::Join:
+        - ""
+        - - Fn::Sub:
+            - "applicationManagement/codeDeploy/${applicationName}/${applicationGroupName}/"
+            - applicationName:
+                Ref: "ApplicationName"
+              applicationGroupName:
+                Ref: "ApplicationGroupName"
+          - "ALIBABA_CLOUD_ACCESS_KEY_SECRET"
   RunInstallCommand:
-    Type: ALIYUN::ECS::RunCommand
+    Type: "ALIYUN::ECS::RunCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
-        - InstanceGroup
-        - InstanceIds
-      Type: RunShellScript
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
       Sync: true
       Timeout: 3600
       CommandContent:
         Fn::Sub:
-          - |
-            #!/bin/bash
-            NEW_API_KEY=${ApiKey}
-            Site="domestic"
-            NEW_PORT="18789"
-            CONFIG_FILE="/home/admin/.openclaw/openclaw.json"
-            OLD_PORT=$(jq -r '.gateway.port // empty' "$CONFIG_FILE")
-            sed -i -E -e "s|(:[[:space:]]*)$OLD_PORT([,}])|\1$NEW_PORT\2|g" -e "s|:$OLD_PORT\"|:$NEW_PORT\"|g" "$CONFIG_FILE"
-            sh /opt/.swas/run-cmd.sh config "${!NEW_API_KEY}" "${!Site}" > /dev/null
-            sh /opt/.swas/run-cmd.sh restart
-            sleep 30
-
-          - ApiKey:
-              Fn::Select:
-                - ApiKeyValue
-                - Ref: BaiLianApiKey
+        - "#!/bin/bash\nset -e\nNEW_API_KEY='${ApiKey}'\nbash /opt/openclaw/run-cmd.sh init\nbash /opt/openclaw/run-cmd.sh config \"$NEW_API_KEY\" domestic\nbash /opt/openclaw/run-cmd.sh start\nbash /opt/openclaw/run-cmd.sh wait-ready 600\n"
+        - ApiKey:
+            Fn::Select:
+            - "ApiKeyValue"
+            - Ref: "BaiLianApiKey"
+  RunSkillsCommand:
+    Condition: "CreateSkills"
+    Type: "ALIYUN::ECS::RunCommand"
+    DependsOn:
+    - "InstanceGroup"
+    - "RunInstallCommand"
+    - "AccessKeyIdDataSource"
+    - "AccessKeySecretDataSource"
+    - "EnableDingtalkRobotByRunCommand"
+    - "EnableEnterpriseWeChatRobotByRunCommand"
+    - "EnableQQRobotByRunCommand"
+    - "EnableFeishuRobotByRunCommand"
+    Properties:
+      InstanceIds:
+        Fn::GetAtt:
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
+      Sync: true
+      Timeout: 1800
+      CommandContent:
+        Fn::Sub:
+        - "#!/bin/bash\nset -e\nSKILL_SPACE_NAME='${SkillSpaceName}'\nSKILL_NAMES='${SkillNames}'\necho \"INFO: 准备安装 Skills (space=$SKILL_SPACE_NAME, names=$SKILL_NAMES)\"\n\nsource /opt/computenest-env/bin/activate\n\n# 配置凭证\nif [[ -n '${AccessKeyId}' && -n '${AccessKeySecret}' ]]; then\n  computenest-cli login \\\n    --access_key_id '${AccessKeyId}' \\\n    --access_key_secret '${AccessKeySecret}' \\\n    2>/dev/null || true\nfi\n\n# 宿主机目录 /opt/openclaw/data/computenest-skillhub-skills 即容器内的\n# /home/node/.openclaw/computenest-skillhub-skills，写进配置的是容器视角路径\nSKILL_DIR=/opt/openclaw/data/computenest-skillhub-skills\nmkdir -p \"$SKILL_DIR\"\n\nCMD=\"computenest-cli skillhub install\"\n[[ -n \"$SKILL_NAMES\" ]] && CMD=\"$CMD $SKILL_NAMES\"\n[[ -n \"$SKILL_SPACE_NAME\" ]] && CMD=\"$CMD --skill_space_name $SKILL_SPACE_NAME\"\nCMD=\"$CMD --output_dir $SKILL_DIR --force\"\neval \"$CMD\"\n\n# 写入 skills.load.extraDirs 并重启容器，使 Skills 生效\nbash /opt/openclaw/run-cmd.sh set-skills-dir\nbash /opt/openclaw/run-cmd.sh restart\nbash /opt/openclaw/run-cmd.sh wait-ready 300\n"
+        - SkillSpaceName:
+            Fn::Jq:
+            - "First"
+            - "if type==\"object\" then (.SkillSpaceName // \"\") else \"\" end"
+            - Ref: "SkillsInfo"
+          SkillNames:
+            Fn::Jq:
+            - "First"
+            - "if type==\"object\" then ((.SkillName // []) | join(\" \")) else \"\" end"
+            - Ref: "SkillsInfo"
+          AccessKeyId:
+            Fn::If:
+            - "CreateSkillSpaceName"
+            - Fn::GetAtt:
+              - "AccessKeyIdDataSource"
+              - "Value"
+            - ""
+          AccessKeySecret:
+            Fn::If:
+            - "CreateSkillSpaceName"
+            - Fn::GetAtt:
+              - "AccessKeySecretDataSource"
+              - "Value"
+            - ""
   EnableDingtalkRobotByRunCommand:
-    Type: ALIYUN::ECS::RunCommand
-    Condition: CreateDingTalkConditions
-    DependsOn: RunInstallCommand
+    Type: "ALIYUN::ECS::RunCommand"
+    Condition: "CreateDingTalkConditions"
+    DependsOn: "RunInstallCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
-        - InstanceGroup
-        - InstanceIds
-      Type: RunShellScript
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
       Sync: true
       Timeout: 3600
       CommandContent:
         Fn::Sub:
-          - |
-            #!/bin/bash
-            APP_ID=${DingTalkClientId}
-            APP_SECRET=${DingTalkClientSecret}
-            sh /opt/.swas/run-cmd.sh set-channel dingtalk "${!APP_ID}" "${!APP_SECRET}" > /dev/null
-            sh /opt/.swas/run-cmd.sh restart
-            echo "OpenClaw配置成功."
-
-          - DingTalkClientId:
-              Ref: DingTalkClientId
-            DingTalkClientSecret:
-              Ref: DingTalkClientSecret
+        - "#!/bin/bash\nAPP_ID=${DingTalkClientId}\nAPP_SECRET=${DingTalkClientSecret}\nsh /opt/.swas/run-cmd.sh set-channel dingtalk \"${!APP_ID}\" \"${!APP_SECRET}\" > /dev/null\nsh /opt/.swas/run-cmd.sh restart\necho \"OpenClaw配置成功.\"\n"
+        - DingTalkClientId:
+            Ref: "DingTalkClientId"
+          DingTalkClientSecret:
+            Ref: "DingTalkClientSecret"
   EnableEnterpriseWeChatRobotByRunCommand:
-    Type: ALIYUN::ECS::RunCommand
-    Condition: EnableEnterpriseWeChatRobotConditions
-    DependsOn: RunInstallCommand
+    Type: "ALIYUN::ECS::RunCommand"
+    Condition: "EnableEnterpriseWeChatRobotConditions"
+    DependsOn:
+    - "RunInstallCommand"
+    - "EnableDingtalkRobotByRunCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
-        - InstanceGroup
-        - InstanceIds
-      Type: RunShellScript
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
       Sync: true
       Timeout: 3600
       CommandContent:
         Fn::Sub:
-          - |
-            #!/bin/bash
-            sleep 2
-            APP_ID=${EnterpriseWeChatRobotToken}
-            APP_SECRET=${EnterpriseWeChatRobotEncodingAESKey}
-            sh /opt/.swas/run-cmd.sh set-channel wecom "${!APP_ID}" "${!APP_SECRET}" > /dev/null
-            sh /opt/.swas/run-cmd.sh restart
-            echo "OpenClaw配置成功."
-
-          - EnterpriseWeChatRobotToken:
-              Ref: EnterpriseWeChatRobotToken
-            EnterpriseWeChatRobotEncodingAESKey:
-              Ref: EnterpriseWeChatRobotEncodingAESKey
+        - "#!/bin/bash\nAPP_ID=${EnterpriseWeChatRobotToken}\nAPP_SECRET=${EnterpriseWeChatRobotEncodingAESKey}\nsh /opt/.swas/run-cmd.sh set-channel wecom \"${!APP_ID}\" \"${!APP_SECRET}\" > /dev/null\nsh /opt/.swas/run-cmd.sh restart\necho \"OpenClaw配置成功.\"\n"
+        - EnterpriseWeChatRobotToken:
+            Ref: "EnterpriseWeChatRobotToken"
+          EnterpriseWeChatRobotEncodingAESKey:
+            Ref: "EnterpriseWeChatRobotEncodingAESKey"
   EnableQQRobotByRunCommand:
-    Type: ALIYUN::ECS::RunCommand
-    Condition: EnableQQRobotConditions
-    DependsOn: RunInstallCommand
+    Type: "ALIYUN::ECS::RunCommand"
+    Condition: "EnableQQRobotConditions"
+    DependsOn:
+    - "RunInstallCommand"
+    - "EnableDingtalkRobotByRunCommand"
+    - "EnableEnterpriseWeChatRobotByRunCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
-        - InstanceGroup
-        - InstanceIds
-      Type: RunShellScript
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
       Sync: true
       Timeout: 3600
       CommandContent:
         Fn::Sub:
-          - |
-            #!/bin/bash
-            sleep 4
-            APP_ID=${QQRobotAppId}
-            APP_SECRET=${QQRobotClientSecret}
-            sh /opt/.swas/run-cmd.sh set-channel qqbot "${!APP_ID}" "${!APP_SECRET}" > /dev/null
-            sh /opt/.swas/run-cmd.sh restart
-            echo "OpenClaw配置成功."
-
-          - QQRobotAppId:
-              Ref: QQRobotAppId
-            QQRobotClientSecret:
-              Ref: QQRobotClientSecret
+        - "#!/bin/bash\nAPP_ID=${QQRobotAppId}\nAPP_SECRET=${QQRobotClientSecret}\nsh /opt/.swas/run-cmd.sh set-channel qqbot \"${!APP_ID}\" \"${!APP_SECRET}\" > /dev/null\nsh /opt/.swas/run-cmd.sh restart\necho \"OpenClaw配置成功.\"\n"
+        - QQRobotAppId:
+            Ref: "QQRobotAppId"
+          QQRobotClientSecret:
+            Ref: "QQRobotClientSecret"
   EnableFeishuRobotByRunCommand:
-    Type: ALIYUN::ECS::RunCommand
-    Condition: EnableFeishuRobotConditions
-    DependsOn: RunInstallCommand
+    Type: "ALIYUN::ECS::RunCommand"
+    Condition: "EnableFeishuRobotConditions"
+    DependsOn:
+    - "RunInstallCommand"
+    - "EnableDingtalkRobotByRunCommand"
+    - "EnableEnterpriseWeChatRobotByRunCommand"
+    - "EnableQQRobotByRunCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
-        - InstanceGroup
-        - InstanceIds
-      Type: RunShellScript
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
       Sync: true
       Timeout: 3600
       CommandContent:
         Fn::Sub:
-          - |
-            #!/bin/bash
-            sleep 6
-            APP_ID=${FeishuRobotAppId}
-            APP_SECRET=${FeishuRobotAppSecret}
-            sh /opt/.swas/run-cmd.sh set-channel feishu "${!APP_ID}" "${!APP_SECRET}" > /dev/null
-            sh /opt/.swas/run-cmd.sh restart
-            echo "OpenClaw配置成功."
-
-          - FeishuRobotAppId:
-              Ref: FeishuRobotAppId
-            FeishuRobotAppSecret:
-              Ref: FeishuRobotAppSecret
+        - "#!/bin/bash\nAPP_ID=${FeishuRobotAppId}\nAPP_SECRET=${FeishuRobotAppSecret}\nsh /opt/.swas/run-cmd.sh set-channel feishu \"${!APP_ID}\" \"${!APP_SECRET}\" > /dev/null\nsh /opt/.swas/run-cmd.sh restart\necho \"OpenClaw配置成功.\"\n"
+        - FeishuRobotAppId:
+            Ref: "FeishuRobotAppId"
+          FeishuRobotAppSecret:
+            Ref: "FeishuRobotAppSecret"
   GetURLByRunCommand:
-    Type: ALIYUN::ECS::RunCommand
+    Type: "ALIYUN::ECS::RunCommand"
+    DependsOn:
+    - "RunInstallCommand"
+    - "EnableDingtalkRobotByRunCommand"
+    - "EnableEnterpriseWeChatRobotByRunCommand"
+    - "EnableQQRobotByRunCommand"
+    - "EnableFeishuRobotByRunCommand"
+    - "RunSkillsCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
-        - InstanceGroup
-        - InstanceIds
-      Type: RunShellScript
+        - "InstanceGroup"
+        - "InstanceIds"
+      Type: "RunShellScript"
       Sync: true
       Timeout: 3600
-      CommandContent: |-
-        #!/bin/bash
-        sleep 30
-        /opt/.swas/run-cmd.sh get-url
+      CommandContent: "#!/bin/bash\nbash /opt/openclaw/run-cmd.sh wait-ready 300 >&2\nbash /opt/openclaw/run-cmd.sh get-url\n"
 Outputs:
   OpenClaw Addresses:
     Description:
-      zh-cn: OpenClaw 地址
-      en: OpenClaw Addresses
+      zh-cn: "OpenClaw 地址"
+      en: "OpenClaw Addresses"
     Value:
       Fn::Base64Decode:
         Fn::GetJsonValue:
-          - Output
-          - Fn::Select:
-              - 0
-              - Fn::GetAtt:
-                  - GetURLByRunCommand
-                  - InvokeResults
-
+        - "Output"
+        - Fn::Select:
+          - 0
+          - Fn::GetAtt:
+            - "GetURLByRunCommand"
+            - "InvokeResults"
 Metadata:
   ALIYUN::ROS::Interface:
     Hidden:
-      - EnablePublicIp
-      - InternetChargeType
+    - "Description"
+    - "ApplicationName"
+    - "ApplicationGroupName"
+    - "EnablePublicIp"
+    - "InternetChargeType"
     ParameterGroups:
-      - Parameters:
-          - PayType
-          - PayPeriodUnit
-          - PayPeriod
-        Label:
-          default: 付费类型配置
-      - Parameters:
-          - EcsInstanceType
-          - InstancePassword
-        Label:
-          default: 资源配置
-      - Parameters:
-          - BaiLianApiKey
-          - CreateDingTalk
-          - DingTalkTemplateId
-          - DingTalkClientId
-          - DingTalkClientSecret
-          - EnableEnterpriseWeChatRobot
-          - EnterpriseWeChatRobotToken
-          - EnterpriseWeChatRobotEncodingAESKey
-          - EnableQQRobot
-          - QQRobotAppId
-          - QQRobotClientSecret
-          - EnableFeishuRobot
-          - FeishuRobotAppId
-          - FeishuRobotAppSecret
-        Label:
-          default: 服务配置
-      - Parameters:
-          - ZoneId
-          - VpcOption
-          - VpcId
-          - VSwitchId
-          - VpcCidrBlock
-          - VSwitchCidrBlock
-        Label:
-          default: 可用区配置
+    - Parameters:
+      - "PayType"
+      - "PayPeriodUnit"
+      - "PayPeriod"
+      Label:
+        default: "付费类型配置"
+    - Parameters:
+      - "EcsInstanceType"
+      - "InstancePassword"
+      Label:
+        default: "资源配置"
+    - Parameters:
+      - "BaiLianApiKey"
+      - "CreateDingTalk"
+      - "DingTalkTemplateId"
+      - "DingTalkClientId"
+      - "DingTalkClientSecret"
+      - "EnableEnterpriseWeChatRobot"
+      - "EnterpriseWeChatRobotToken"
+      - "EnterpriseWeChatRobotEncodingAESKey"
+      - "EnableQQRobot"
+      - "QQRobotAppId"
+      - "QQRobotClientSecret"
+      - "EnableFeishuRobot"
+      - "FeishuRobotAppId"
+      - "FeishuRobotAppSecret"
+      Label:
+        default: "服务配置"
+    - Parameters:
+      - "CreateSkillsOption"
+      - "SkillsInfo"
+      - "ConnectionIds"
+      Label:
+        zh-cn: "工具配置"
+        en: "Tool configuration"
+    - Parameters:
+      - "ZoneId"
+      - "VpcOption"
+      - "VpcId"
+      - "VSwitchId"
+      - "VpcCidrBlock"
+      - "VSwitchCidrBlock"
+      Label:
+        default: "可用区配置"
     QuickDeployConfig:
       PackageFields:
-        - Key: EcsInstanceType
-        - Key: SystemDiskCategory
-          Label:
-            zh-cn: 系统盘
-            en: System Disk
-          Value: 'ESSD Entry云盘 / 40 GB'
-        - Key: InternetChargeType
-          Label:
-            zh-cn: 公网带宽
-            en: Internet Charge Type
-          Value: '3 Mbps峰值带宽'
-        - Key: PayType
-          Label:
-            zh-cn: 付费类型
-            en: Pay Type
-          Value: '${PayType}'
-        - Key: PayPeriodUnit
-          Label:
-            zh-cn: 付费时长
-            en: Pay Period
-          Value: '${PayPeriod} ${PayPeriodUnit}'
+      - Key: "EcsInstanceType"
+      - Key: "SystemDiskCategory"
+        Label:
+          zh-cn: "系统盘"
+          en: "System Disk"
+        Value: "ESSD Entry云盘 / 40 GB"
+      - Key: "InternetChargeType"
+        Label:
+          zh-cn: "公网带宽"
+          en: "Internet Charge Type"
+        Value: "3 Mbps峰值带宽"
+      - Key: "PayType"
+        Label:
+          zh-cn: "付费类型"
+          en: "Pay Type"
+        Value: "${PayType}"
+      - Key: "PayPeriodUnit"
+        Label:
+          zh-cn: "付费时长"
+          en: "Pay Period"
+        Value: "${PayPeriod} ${PayPeriodUnit}"
       PredefinedParameters:
-        - Name: 热卖套餐，长期使用首选！
-          Parameters:
-            EcsInstanceType: ecs.e-c1m1.large
-            PayPeriodUnit: Month
-            PayPeriod: 1
-            PayType: PrePaid
-            InternetChargeType: PayByTraffic
-          OrderList:
-            - EcsInstanceType
-            - PayPeriodUnit
-            - PayPeriod
-            - PayType
-            - InternetChargeType
-          Type: Normal
-          Description: 每月免费流量，超值性价比！
-        - Name: 尝鲜套餐，只需0.3元/小时
-          Parameters:
-            EcsInstanceType: ecs.e-c1m2.large
-            PayPeriodUnit: Month
-            PayPeriod: 1
-            PayType: PostPaid
-            InternetChargeType: PayByTraffic
-          OrderList:
-            - EcsInstanceType
-            - PayPeriodUnit
-            - PayPeriod
-            - PayType
-            - InternetChargeType
-          Type: Normal
-          Description: 北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href="https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o&utm_content=g_1000409993#student-300coupon" target="_blank">立即领取</a>
-        - Name: 自定义套餐
-          Parameters: {}
-          OrderList:
-            - EcsInstanceType
-            - PayPeriodUnit
-            - PayPeriod
-            - PayType
-          Type: Custom
+      - Name: "热卖套餐，长期使用首选！"
+        Parameters:
+          EcsInstanceType: "ecs.e-c1m1.large"
+          PayPeriodUnit: "Month"
+          PayPeriod: 1
+          PayType: "PrePaid"
+          InternetChargeType: "PayByTraffic"
+        OrderList:
+        - "EcsInstanceType"
+        - "PayPeriodUnit"
+        - "PayPeriod"
+        - "PayType"
+        - "InternetChargeType"
+        Type: "Normal"
+        Description: "每月免费流量，超值性价比！"
+      - Name: "尝鲜套餐，只需0.3元/小时"
+        Parameters:
+          EcsInstanceType: "ecs.e-c1m2.large"
+          PayPeriodUnit: "Month"
+          PayPeriod: 1
+          PayType: "PostPaid"
+          InternetChargeType: "PayByTraffic"
+        OrderList:
+        - "EcsInstanceType"
+        - "PayPeriodUnit"
+        - "PayPeriod"
+        - "PayType"
+        - "InternetChargeType"
+        Type: "Normal"
+        Description: "北京，杭州地域可用学生专属算力包<br>及300元学生优惠券抵扣！<a href=\"https://www.aliyun.com/activity/ecs/student-benefits?spm=5176.20960838.root.4.4743305eBUHA1o&utm_content=g_1000409993#student-300coupon\" target=\"_blank\">立即领取</a>"
+      - Name: "自定义套餐"
+        Parameters: {}
+        OrderList:
+        - "EcsInstanceType"
+        - "PayPeriodUnit"
+        - "PayPeriod"
+        - "PayType"
+        Type: "Custom"
       CustomFields:
-        - Key: InstancePassword
+      - Key: "InstancePassword"
       CostRelatedKeys:
-        - RegionId
-        - PayPeriod
+      - "RegionId"
+      - "PayPeriod"
       AutomaticZone:
-        ZoneIdKey: ZoneId
+        ZoneIdKey: "ZoneId"

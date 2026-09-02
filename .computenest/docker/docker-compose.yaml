@@ -1,0 +1,36 @@
+# OpenClaw 社区版（计算巢）运行编排
+#
+# 镜像 openclaw-cn:latest 在部署物构建期已烘进 ECS 系统盘，运行期不访问任何外网仓库，
+# 因此 pull_policy 固定为 never。
+#
+# /opt/openclaw/data 在构建期已从镜像内 /home/node/.openclaw 预导出（含 extensions
+# 与 node_modules/openclaw 软链），整目录 bind-mount 回容器，这样：
+#   - 宿主机可以直接用 jq 原子改写 openclaw.json，不必走带乐观锁的 openclaw config set；
+#   - 容器内 OpenClaw 自身的原子写（写临时文件后 rename）不会因单文件挂载而失败；
+#   - 会话、凭据、Skills 等状态天然持久化。
+services:
+  openclaw:
+    image: openclaw-cn:latest
+    container_name: openclaw
+    restart: unless-stopped
+    pull_policy: never
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+    - "18789:18789"
+    - "18790:18790"
+    volumes:
+    - /opt/openclaw/data:/home/node/.openclaw
+    healthcheck:
+      test:
+      - "CMD-SHELL"
+      - "node -e \"require('net').connect(18789,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\""
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"

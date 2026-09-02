@@ -300,3 +300,8 @@ cp -f openclaw.json.bak openclaw.json
 ## 如何使用OpenClaw（Clawdbot）
 
 更多用法请参考OpenClaw（Clawdbot）[官网文档](https://docs.clawd.bot/)。
+
+## 相关链接
+
+- [阿里云计算巢控制台](https://computenest.console.aliyun.com/service/market/cn-hangzhou)
+- [通过自定义镜像创建部署物并关联服务](https://help.aliyun.com/zh/compute-nest/use-cases/create-an-ecs-custom-image-and-create-an-ecs-image-deployment?spm=5176.24779694.console-base_help.dexternal.b2144d22qsS7U4)

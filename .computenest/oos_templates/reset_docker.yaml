@@ -1,0 +1,102 @@
+FormatVersion: OOS-2019-06-01
+Description:
+  name-en: Reset Server
+  name-zh-cn: 重置服务
+# Docker 化部署物专用的重置流程。
+# 镜像内容已经烘在本地系统盘里，因此不再走 ACS::ECS::ReplaceSystemDisk：
+#   - 不需要实例密码
+#   - 不需要维护 24 个地域的金镜像 ID 映射表
+#   - 重置耗时从分钟级降到秒级
+# 未改造的"选择ECS"模板仍使用 reset.yaml（换系统盘方案）。
+Parameters:
+  Checkbox:
+    Type: String
+    Label:
+      en: Backup Instructions
+      zh-cn: 备份说明
+    AssociationProperty: AlertCheckbox
+    AssociationPropertyMetadata:
+      Description: 本操作会清空 OpenClaw 的全部配置、会话记录、工作区文件以及已安装的 Skills，使用前请确保无重要数据或已完成数据备份，以免丢失数据。
+      ConfirmText: 我已备份完成(或无需备份)
+      Alert: true
+      Type: warning
+      MustChecked: true
+  regionId:
+    Type: String
+    Label:
+      en: RegionId
+      zh-cn: 地域ID
+    AssociationProperty: RegionId
+    Default: '{{ ACS::RegionId }}'
+  targets:
+    Type: Json
+    Label:
+      en: TargetInstance
+      zh-cn: 目标实例
+    AssociationProperty: Targets
+    AssociationPropertyMetadata:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: regionId
+  BaiLianApiKey:
+    NoEcho: true
+    Type: String
+    Description:
+      zh-cn: 开通百炼模型服务，并获得 API-KEY。请参考： <a href="https://developer.aliyun.com/article/1655158"  target="_blank">获取百炼API-KEY</a>。
+      en: 'Activate BaiLian and obtain the API-KEY. Please refer to:  <a href="https://developer.aliyun.com/article/1655158"  target="_blank">Get BaiLian API-KEY</a>.'
+    Label:
+      zh-cn: 百炼 API-KEY
+      en: BaiLian API-KEY
+    AssociationProperty: ALIYUN::Bailian::ApiKey::ApiKeyInfo
+Tasks:
+  - Name: getInstance
+    Description:
+      en: Views the ECS instances
+      zh-cn: 获取ECS实例
+    Action: ACS::SelectTargets
+    Properties:
+      ResourceType: ALIYUN::ECS::Instance
+      RegionId: '{{ regionId }}'
+      Filters:
+        - '{{ targets }}'
+    Outputs:
+      InstanceId:
+        Type: String
+        ValueSelector: Instances.Instance[].InstanceId
+      OSType:
+        Type: String
+        ValueSelector: Instances.Instance[].OSType
+  - Name: ResetServiceByRunCommand
+    When:
+      Fn::Equals:
+        - '{{ getInstance.OSType }}'
+        - linux
+    Action: ACS::ECS::RunCommand
+    Description:
+      en: Reset OpenClaw to its initial state and restart the container
+      zh-cn: 重置 OpenClaw 到初始状态并重新拉起容器
+    Properties:
+      regionId: '{{ regionId }}'
+      instanceId: '{{ getInstance.InstanceId }}'
+      commandType: RunShellScript
+      timeout: 1200
+      commandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            set -e
+            # 数据目录由镜像重新 seed，访问令牌会被保留，控制台地址与令牌保持不变
+            bash /opt/openclaw/run-cmd.sh reset '${BaiLianApiKey}' domestic
+          - BaiLianApiKey:
+              Fn::Select:
+                - ApiKeyValue
+                - '{{BaiLianApiKey}}'
+Metadata:
+  ALIYUN::OOS::Interface:
+    ParameterGroups:
+      - Parameters:
+          - regionId
+          - targets
+        Label:
+          default:
+            zh-cn: 选择实例
+            en: Select Instances

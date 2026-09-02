@@ -1,0 +1,164 @@
+Service:
+  RegionId: cn-hangzhou
+  DeployType: ros
+  DeployMetadata:
+    EstimateTime: 240
+    SupplierDeployMetadata:
+      DeployTimeout: 7200
+      ArtifactRelation:
+        # "新建ECS" 模板使用 Docker 化的新部署物
+        openclaw_docker_image:
+          ArtifactId: ${Artifact.OpenClawDockerImage.ArtifactId}
+          ArtifactVersion: ${Artifact.OpenClawDockerImage.ArtifactVersion}
+        # "选择ECS" 模板本轮不改造，继续用原有部署物换系统盘
+        centos_7:
+          ArtifactId: ${Artifact.OpenClawLegacyImage.ArtifactId}
+          ArtifactVersion: ${Artifact.OpenClawLegacyImage.ArtifactVersion}
+      SupplierTemplateConfigs:
+      - Name: 新建ECS
+        Url: ros_templates/template.yaml
+        PredefinedParameters: []
+        AllowedRegions: &allowed_regions
+        - cn-beijing
+        - cn-hangzhou
+        - cn-shanghai
+        - cn-qingdao
+        - cn-zhangjiakou
+        - cn-huhehaote
+        - cn-wulanchabu
+        - cn-shenzhen
+        - cn-heyuan
+        - cn-guangzhou
+        - cn-chengdu
+        - cn-hongkong
+      - Name: 选择ECS
+        Url: ros_templates/select-ecs.yaml
+        PredefinedParameters: []
+        AllowedRegions: *allowed_regions
+    TemplateConfigs:
+    - Name: 新建ECS
+      Url: ros_templates/template.yaml
+      AllowedRegions: *allowed_regions
+      PredefinedParameters: []
+      DeployScene: ECS
+      OutputConfigs:
+      - OutputKey: __WebProxy__
+        EnableWebProxy: false
+    - Name: 选择ECS
+      Url: ros_templates/select-ecs.yaml
+      AllowedRegions: *allowed_regions
+      PredefinedParameters: []
+      DeployScene: ECS
+      OutputConfigs:
+      - OutputKey: __WebProxy__
+        EnableWebProxy: false
+    NetworkMetadata:
+      EnablePrivateVpcConnection: false
+      EnableReversePrivateVpcConnection: false
+    ServiceInstanceNameRule:
+      Prefix: clawdbot-
+      UseDefaultValue: true
+  OperationMetadata:
+    CustomOperations:
+      Actions:
+      # Docker 化后的重置：不换系统盘，直接用本地镜像重建数据目录
+      - TemplateNames:
+        - 新建ECS
+        Name: 重置服务
+        Type: OOS
+        TemplateUrl: oos_templates/reset_docker.yaml
+        Operator: All
+      # 未改造的"选择ECS"仍用原有换系统盘方案（内含 24 地域金镜像 ID 映射）
+      - TemplateNames:
+        - 选择ECS
+        Name: 重置服务
+        Type: OOS
+        TemplateUrl: oos_templates/reset.yaml
+        Operator: All
+      - TemplateNames:
+        - 新建ECS
+        - 选择ECS
+        Name: 配置百炼CodingPlan
+        Type: OOS
+        TemplateUrl: oos_templates/config_codingplan.yaml
+        Operator: All
+      - TemplateNames:
+        - 新建ECS
+        - 选择ECS
+        Name: 配置频道
+        Type: OOS
+        TemplateUrl: oos_templates/config_channel.yaml
+        Operator: All
+    ModifyParametersConfig:
+    - TemplateName: 新建ECS
+      Operation:
+      - Name: 变更Skill配置
+        Description: 变更Skill配置
+        Type: Custom
+        SupportPredefinedParameters: false
+        Parameters:
+        - CreateSkillsOption
+        - SkillsInfo
+        EnableLogging: false
+    - TemplateName: 选择ECS
+      Operation:
+      - Name: 变更Skill配置
+        Description: 变更Skill配置
+        Type: Custom
+        SupportPredefinedParameters: false
+        Parameters:
+        - CreateSkillsOption
+        - SkillsInfo
+        EnableLogging: false
+    PrometheusConfigMap:
+      新建ECS:
+        EnablePrometheus: false
+      选择ECS:
+        EnablePrometheus: false
+    SupportBackup: false
+  ServiceType: private
+  ServiceInfo:
+  - Agreements: []
+    Image: resources/icons/service_logo.png
+    Locale: zh-CN
+    Name: OpenClaw社区版
+    ShortDescription: OpenClaw 是一款运行在您自有设备上的本地化个人 AI 助手，致力于在保护隐私、保障安全的前提下，为您提供智能、高效、个性化的数字生活体验。
+    Softwares: []
+  ShareType: Public
+  ApprovalType: Manual
+Artifact:
+  # Docker 化部署物：在香港托管构建，构建期 docker pull ghcr.io/openclaw/openclaw:latest
+  # 并二次构建装入 4 个渠道插件，把镜像烘进 ECS 系统盘，运行期零外网依赖
+  # （ghcr.io 在大陆地域不可达，只能靠构建期规避）。
+  OpenClawDockerImage:
+    ArtifactType: EcsImage
+    ArtifactName: openclaw_docker_image
+    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 4 个渠道插件
+    ArtifactProperty:
+      RegionId: cn-hongkong
+    ArtifactBuildProperty:
+      RegionId: cn-hongkong
+      # 计算巢公共基础镜像，已预装 Docker 26，无需自行安装 docker-ce
+      SourceImageId: aliyun/services/computenest/images/aliyun_3_2104_docker_26
+      CommandType: RunShellScript
+      Timeout: 10800
+      CommandContent: |-
+        #!/bin/bash
+        set -euxo pipefail
+        # 构建逻辑随仓库维护在 .computenest/docker/build.sh，这里只负责拉取并执行，
+        # 避免同一份脚本在仓库与服务配置两处重复维护。
+        dnf install -y git
+        export SRC_DIR=/tmp/openclaw-bootstrap
+        rm -rf "$SRC_DIR"
+        git clone --depth 1 --branch main https://github.com/aliyun-computenest/quickstart-clawdbot.git "$SRC_DIR"
+        bash "$SRC_DIR/.computenest/docker/build.sh"
+    SupportRegionIds: *allowed_regions
+  # 原有部署物，供未改造的"选择ECS"模板换系统盘使用，本轮不做任何变更
+  OpenClawLegacyImage:
+    ArtifactType: EcsImage
+    ArtifactName: clawdbot_轻量专用
+    Description: openclaw414china 版本基础上，新增补充computenestcli
+    ArtifactProperty:
+      ImageId: m-bp130k2als55elkt0ati
+      RegionId: cn-hangzhou
+    SupportRegionIds: *allowed_regions
