@@ -103,11 +103,22 @@ if grep -q "Cannot find module" /tmp/smoke.log; then
   echo "ERROR: 冒烟测试发现插件模块解析失败，请检查插件与 OpenClaw 版本兼容性" >&2
   exit 1
 fi
+# gateway 自查不通过时会拒绝启动并进入崩溃重启循环，端口照样通，只能靠日志识别。
+if grep -q "Gateway start blocked" /tmp/smoke.log; then
+  echo "ERROR: gateway 拒绝启动（配置被判定为不完整或被篡改），详见上方日志" >&2
+  exit 1
+fi
+missing_plugins=""
 for plugin in dingtalk-connector wecom-openclaw-plugin openclaw-qqbot openclaw-lark; do
   if ! grep -q "$plugin" /tmp/smoke.log; then
-    echo "WARN: 日志中未出现插件 $plugin，可能未被加载" >&2
+    missing_plugins="$missing_plugins $plugin"
   fi
 done
+if [ -n "$missing_plugins" ]; then
+  echo "ERROR: 以下插件未出现在启动日志中，判定为未加载：$missing_plugins" >&2
+  exit 1
+fi
+echo "INFO: 冒烟测试通过，gateway 与 4 个渠道插件均正常"
 
 # ── 7. 清理，交付干净的镜像 ───────────────────────────────────────────────
 docker compose -f "$APP_DIR/docker-compose.yaml" down --remove-orphans

@@ -100,7 +100,8 @@ cmd_init() {
   if [ -f "$CONFIG_FILE" ]; then
     # 已初始化过：只补齐 gateway 段，不覆盖用户在控制台上的其他改动
     edit_config '
-      .gateway.port = 18789
+      .gateway.mode = "local"
+      | .gateway.port = 18789
       | .gateway.bind = "lan"
       | .gateway.auth = { mode: "token", token: $token }
     ' --arg token "$token"
@@ -131,18 +132,19 @@ cmd_init() {
         commands: {
           native: "auto",
           nativeSkills: "auto",
-          restart: true,
-          ownerDisplay: "raw"
+          restart: true
         },
         gateway: {
+          # mode 必填。缺了它新版 gateway 会判定配置被篡改并拒绝启动：
+          # "Gateway start blocked: existing config is missing gateway.mode"
+          mode: "local",
           port: 18789,
           bind: "lan",
           http: { endpoints: { chatCompletions: { enabled: true } } },
           controlUi: {
             allowedOrigins: ["*"],
             dangerouslyAllowHostHeaderOriginFallback: true,
-            allowInsecureAuth: true,
-            dangerouslyDisableDeviceAuth: true
+            allowInsecureAuth: true
           },
           auth: { mode: "token", token: $token }
         },
@@ -325,11 +327,16 @@ cmd_logs() {
 }
 
 cmd_wait_ready() {
-  local timeout="${1:-300}" waited=0
+  local timeout="${1:-300}" waited=0 code
+  # 这里不能只做 TCP 连接探测。compose 做了端口映射后，docker-proxy 在容器刚创建时
+  # 就开始监听宿主端口，容器内进程即使在崩溃重启循环里，connect 一样会成功，
+  # 于是 0 秒就误报「已就绪」。必须发真实 HTTP 请求、拿到状态码才算 gateway 在应答
+  # （401 也算就绪，说明进程活着且鉴权已生效）。
   while [ "$waited" -lt "$timeout" ]; do
-    if (exec 3<>"/dev/tcp/127.0.0.1/$GATEWAY_PORT") 2>/dev/null; then
-      exec 3<&- 3>&- 2>/dev/null || true
-      echo "INFO: OpenClaw gateway 已就绪（${waited}s）"
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 \
+      "http://127.0.0.1:$GATEWAY_PORT/" 2>/dev/null || true)
+    if [ -n "$code" ] && [ "$code" != "000" ]; then
+      echo "INFO: OpenClaw gateway 已就绪（${waited}s，HTTP $code）"
       return 0
     fi
     sleep 5

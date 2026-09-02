@@ -9,6 +9,15 @@ Locals:
       Fn::FormatTime:
       - "%Y%m%d-%H%M%S"
       - "Asia/Shanghai"
+# 本模板实际使用的镜像占位符声明。真正的取值点是下方 ReplaceSystemDisk 里的
+# OOS 执行参数 imageId（小写），计算巢部署时会按 config.yaml 的 ArtifactRelation
+# 把 centos_7 替换为真实镜像 ID。这里再声明一次是因为 computenest-cli 的静态
+# 校验只递归查找大写的 ImageId 键，识别不到小写的 OOS 参数，缺了这段 import
+# 会以"ArtifactRelation 里的 centos_7 未被任何模板引用"为由拒绝。
+Mappings:
+  ImageId:
+    ExistingEcs:
+      ImageId: "centos_7"
 Conditions:
   IsCreateImage:
     Fn::Equals:
