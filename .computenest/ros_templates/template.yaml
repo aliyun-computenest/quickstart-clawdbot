@@ -30,10 +30,6 @@ Conditions:
     Fn::Equals:
     - true
     - Ref: "EnableQQRobot"
-  EnableFeishuRobotConditions:
-    Fn::Equals:
-    - true
-    - Ref: "EnableFeishuRobot"
   CreateSkills:
     Fn::Equals:
     - Ref: "CreateSkillsOption"
@@ -421,46 +417,6 @@ Parameters:
           - true
           - "${EnableQQRobot}"
     Default: ""
-  EnableFeishuRobot:
-    Type: "Boolean"
-    Label:
-      en: "Enable Feishu Robot"
-      zh-cn: "启用飞书机器人"
-    Default: false
-    Description:
-      en: "Please See <a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b\" target=\"_blank\">How to Configure a Feishu Robot</a>"
-      zh-cn: "请参考：<a href=\"https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b\" target=\"_blank\">如何配置飞书机器人</a>"
-  FeishuRobotAppId:
-    Type: "String"
-    Label:
-      en: "Feishu Robot App ID"
-      zh-cn: "飞书机器人 App ID"
-    Description:
-      en: "Visit the Feishu Open Platform to create an application and obtain the App ID."
-      zh-cn: "访问<a href=\"https://open.feishu.cn/app\" target=\"_blank\">飞书开放平台</a>创建应用后获取 App ID。"
-    AssociationPropertyMetadata:
-      Visible:
-        Condition:
-          Fn::Equals:
-          - true
-          - "${EnableFeishuRobot}"
-    Default: ""
-  FeishuRobotAppSecret:
-    Type: "String"
-    NoEcho: true
-    Label:
-      en: "Feishu Robot App Secret"
-      zh-cn: "飞书机器人 App Secret"
-    Description:
-      en: "Visit the Feishu Open Platform to create an application and obtain the App Secret."
-      zh-cn: "访问<a href=\"https://open.feishu.cn/app\" target=\"_blank\">飞书开放平台</a>创建应用后获取 App Secret。"
-    AssociationPropertyMetadata:
-      Visible:
-        Condition:
-          Fn::Equals:
-          - true
-          - "${EnableFeishuRobot}"
-    Default: ""
   CreateSkillsOption:
     Type: "Boolean"
     Default: false
@@ -669,7 +625,6 @@ Resources:
     - "EnableDingtalkRobotByRunCommand"
     - "EnableEnterpriseWeChatRobotByRunCommand"
     - "EnableQQRobotByRunCommand"
-    - "EnableFeishuRobotByRunCommand"
     Properties:
       InstanceIds:
         Fn::GetAtt:
@@ -767,29 +722,6 @@ Resources:
             Ref: "QQRobotAppId"
           QQRobotClientSecret:
             Ref: "QQRobotClientSecret"
-  EnableFeishuRobotByRunCommand:
-    Type: "ALIYUN::ECS::RunCommand"
-    Condition: "EnableFeishuRobotConditions"
-    DependsOn:
-    - "RunInstallCommand"
-    - "EnableDingtalkRobotByRunCommand"
-    - "EnableEnterpriseWeChatRobotByRunCommand"
-    - "EnableQQRobotByRunCommand"
-    Properties:
-      InstanceIds:
-        Fn::GetAtt:
-        - "InstanceGroup"
-        - "InstanceIds"
-      Type: "RunShellScript"
-      Sync: true
-      Timeout: 3600
-      CommandContent:
-        Fn::Sub:
-        - "#!/bin/bash\nAPP_ID=${FeishuRobotAppId}\nAPP_SECRET=${FeishuRobotAppSecret}\nsh /opt/.swas/run-cmd.sh set-channel feishu \"${!APP_ID}\" \"${!APP_SECRET}\" > /dev/null\nsh /opt/.swas/run-cmd.sh restart\necho \"OpenClaw配置成功.\"\n"
-        - FeishuRobotAppId:
-            Ref: "FeishuRobotAppId"
-          FeishuRobotAppSecret:
-            Ref: "FeishuRobotAppSecret"
   GetURLByRunCommand:
     Type: "ALIYUN::ECS::RunCommand"
     DependsOn:
@@ -797,7 +729,6 @@ Resources:
     - "EnableDingtalkRobotByRunCommand"
     - "EnableEnterpriseWeChatRobotByRunCommand"
     - "EnableQQRobotByRunCommand"
-    - "EnableFeishuRobotByRunCommand"
     - "RunSkillsCommand"
     Properties:
       InstanceIds:
@@ -811,8 +742,8 @@ Resources:
 Outputs:
   OpenClaw Addresses:
     Description:
-      zh-cn: "OpenClaw 地址"
-      en: "OpenClaw Addresses"
+      zh-cn: "OpenClaw 访问信息（含首次登录用的一次性链接）"
+      en: "OpenClaw access info (includes the one-time link for first login)"
     Value:
       Fn::Base64Decode:
         Fn::GetJsonValue:
@@ -854,9 +785,6 @@ Metadata:
       - "EnableQQRobot"
       - "QQRobotAppId"
       - "QQRobotClientSecret"
-      - "EnableFeishuRobot"
-      - "FeishuRobotAppId"
-      - "FeishuRobotAppSecret"
       Label:
         default: "服务配置"
     - Parameters:

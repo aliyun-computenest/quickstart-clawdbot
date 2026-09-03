@@ -89,6 +89,15 @@ Service:
         Type: OOS
         TemplateUrl: oos_templates/config_channel.yaml
         Operator: All
+      # 只挂"新建ECS"：openclaw 2026.8.1 起明文 HTTP 也强制设备配对，首个浏览器需要一次性
+      # 登录链接才能进入控制台。链接 10 分钟过期，因此不能放进部署 Outputs 的静态快照，
+      # 必须做成可随时重新生成的运维操作。"选择ECS"仍是老 SWAS 镜像，没有该子命令。
+      - TemplateNames:
+        - 新建ECS
+        Name: 获取控制台登录链接
+        Type: OOS
+        TemplateUrl: oos_templates/get_login_url.yaml
+        Operator: All
     ModifyParametersConfig:
     - TemplateName: 新建ECS
       Operation:
@@ -118,22 +127,28 @@ Service:
     SupportBackup: false
   ServiceType: private
   ServiceInfo:
-  - Agreements: []
-    Image: resources/icons/service_logo.png
-    Locale: zh-CN
+  - Locale: zh-CN
     Name: OpenClaw社区版
-    ShortDescription: OpenClaw 是一款运行在您自有设备上的本地化个人 AI 助手，致力于在保护隐私、保障安全的前提下，为您提供智能、高效、个性化的数字生活体验。
+    ShortDescription: OpenClaw 是一款运行在您自有设备上的本地化个人 AI 
+      助手，致力于在保护隐私、保障安全的前提下，为您提供智能、高效、个性化的数字生活体验。
+    Image: 
+      https://service-info-public.oss-cn-hangzhou.aliyuncs.com/1853370294850618/service-image/8a373242-578f-440e-bcc6-8f9916af090c.jpg
     Softwares: []
   ShareType: Public
   ApprovalType: Manual
 Artifact:
   # Docker 化部署物：在香港托管构建，构建期 docker pull ghcr.io/openclaw/openclaw:latest
-  # 并二次构建装入 4 个渠道插件，把镜像烘进 ECS 系统盘，运行期零外网依赖
+  # 并二次构建装入 3 个渠道插件，把镜像烘进 ECS 系统盘，运行期零外网依赖
   # （ghcr.io 在大陆地域不可达，只能靠构建期规避）。
+  #
+  # 构建地域是香港，而计算巢管控面只有 cn-hangzhou，因此 draft 部署物无法直接用
+  # `CreateServiceInstance --ServiceVersion draft` 部署（会报 Service instance and
+  # draft artifact are in different regions）。验证只能走 ReleaseArtifact +
+  # PreLaunchService 转 beta 后再部署。
   OpenClawDockerImage:
     ArtifactType: EcsImage
     ArtifactName: openclaw_docker_image
-    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 4 个渠道插件
+    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 3 个渠道插件（钉钉/企业微信/QQ）
     ArtifactProperty:
       RegionId: cn-hongkong
     ArtifactBuildProperty:

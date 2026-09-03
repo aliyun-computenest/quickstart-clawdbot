@@ -151,52 +151,6 @@ Parameters:
             - true
             - ${EnableQQRobot}
     Default: ''
-  EnableFeishuRobot:
-    Type: Boolean
-    Label:
-      en: Enable Feishu Robot
-      zh-cn: 启用飞书机器人
-    Default: false
-    Description:
-      en: >-
-        Please See <a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b" target="_blank">How to Configure a Feishu Robot</a>
-      zh-cn: >-
-        请参考：<a href="https://help.aliyun.com/zh/compute-nest/use-cases/moltbot-community-edition-service-instance-deployment-documentation#07d1f6658084b" target="_blank">如何配置飞书机器人</a>
-  FeishuRobotAppId:
-    Type: String
-    Label:
-      en: Feishu Robot App ID
-      zh-cn: 飞书机器人 App ID
-    Description:
-      en: >-
-        Visit the Feishu Open Platform to create an application and obtain the App ID.
-      zh-cn: >-
-        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App ID。
-    AssociationPropertyMetadata:
-      Visible:
-        Condition:
-          Fn::Equals:
-            - true
-            - ${EnableFeishuRobot}
-    Default: ''
-  FeishuRobotAppSecret:
-    Type: String
-    NoEcho: true
-    Label:
-      en: Feishu Robot App Secret
-      zh-cn: 飞书机器人 App Secret
-    Description:
-      en: >-
-        Visit the Feishu Open Platform to create an application and obtain the App Secret.
-      zh-cn: >-
-        访问<a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a>创建应用后获取 App Secret。
-    AssociationPropertyMetadata:
-      Visible:
-        Condition:
-          Fn::Equals:
-            - true
-            - ${EnableFeishuRobot}
-    Default: ''
 Tasks:
   - Name: getInstance
     Description:
@@ -251,28 +205,6 @@ Tasks:
         APP_ID="{{EnterpriseWeChatRobotToken}}"
         APP_SECRET="{{EnterpriseWeChatRobotEncodingAESKey}}"
         sh /opt/.swas/run-cmd.sh set-channel wecom "$APP_ID" "$APP_SECRET" > /dev/null
-        sh /opt/.swas/run-cmd.sh restart
-        echo "OpenClaw配置成功."
-        sleep 10
-
-  - Name: ConfigFeishuByRunCommand
-    Action: ACS::ECS::RunCommand
-    When:
-        Fn::Equals:
-          - true
-          - "{{ EnableFeishuRobot }}"
-    Description:
-      en: Config feishu by run command
-      zh-cn: 通过执行命令配置飞书
-    Properties:
-      regionId: '{{ regionId }}'
-      instanceId: '{{ getInstance.InstanceId }}'
-      commandType: RunShellScript
-      commandContent: |-
-        #!/bin/bash
-        APP_ID="{{FeishuRobotAppId}}"
-        APP_SECRET="{{FeishuRobotAppSecret}}"
-        sh /opt/.swas/run-cmd.sh set-channel feishu "$APP_ID" "$APP_SECRET" > /dev/null
         sh /opt/.swas/run-cmd.sh restart
         echo "OpenClaw配置成功."
         sleep 10

@@ -1,4 +1,7 @@
 FormatVersion: OOS-2019-06-01
+Description:
+  en: Generate a one-time login link for the OpenClaw console
+  zh-cn: 生成 OpenClaw 控制台的一次性登录链接
 Parameters:
   regionId:
     Type: String
@@ -16,22 +19,6 @@ Parameters:
     AssociationPropertyMetadata:
       ResourceType: ALIYUN::ECS::Instance
       RegionId: regionId
-  BaiLianApiKey:
-    NoEcho: true
-    Type: String
-    Label:
-      zh-cn: 百炼 Coding Plan API-KEY
-      en: BaiLian Coding Plan API-KEY
-    Description:
-      zh-cn: >-
-        开通百炼模型服务，并获得 API-KEY。请参考：<a
-        href="https://developer.aliyun.com/article/1655158" target="_blank">获取百炼API-KEY</a>。
-      en: >-
-        Activate BaiLian and obtain the API-KEY. Please refer to: <a
-        href="https://developer.aliyun.com/article/1655158" target="_blank">Get BaiLian API-KEY</a>.
-    AssociationProperty: ALIYUN::Bailian::ApiKey::ApiKeyInfo
-    AssociationPropertyMetadata:
-      SupportCodingPlan: true
 Tasks:
   - Name: getInstance
     Description:
@@ -50,21 +37,30 @@ Tasks:
       OSType:
         Type: String
         ValueSelector: Instances.Instance[].OSType
-  - Name: ConfigServiceByRunCommand
+  - Name: GetLoginUrlByRunCommand
     When:
       Fn::Equals:
         - '{{ getInstance.OSType }}'
         - linux
     Action: ACS::ECS::RunCommand
     Description:
-      en: Config service by run command
-      zh-cn: 通过执行命令配置服务
+      en: Generate the one-time login link by run command
+      zh-cn: 通过执行命令生成一次性登录链接
     Properties:
       regionId: '{{ regionId }}'
       instanceId: '{{ getInstance.InstanceId }}'
       commandType: RunShellScript
       commandContent: |-
         #!/bin/bash
-        sh /opt/.swas/run-cmd.sh config "{{BaiLianApiKey}}" "domestic" > /dev/null
-        sh /opt/.swas/run-cmd.sh restart
-        sleep 10
+        sh /opt/.swas/run-cmd.sh get-login-url
+    Outputs:
+      loginUrl:
+        Type: String
+        ValueSelector: invocationOutput
+Outputs:
+  loginUrl:
+    Type: String
+    Label:
+      en: One-time login link
+      zh-cn: 一次性登录链接
+    Value: '{{ GetLoginUrlByRunCommand.loginUrl }}'

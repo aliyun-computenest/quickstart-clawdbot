@@ -12,7 +12,11 @@ OpenClaw（Clawdbot）是一个现代化的机器人流程自动化（RPA）平�
 4. 等待部署完成后进入服务实例详情页。
 
    <img src="2.jpg" alt="2" width="1000">
-5. 点击服务地址并使用OpenClaw（Clawdbot）社区版。
+5. 在详情页的 **OpenClaw 访问信息** 里会给出控制台地址、访问令牌，以及一条 **一次性登录链接** 。
+
+   > **首次访问请直接用这条一次性链接。** OpenClaw 自 2026.8.1 起，即使通过明文 HTTP 访问也要求首个浏览器完成设备配对，直接打开控制台地址会停在「需要设备配对」页面。用一次性链接打开可直接完成登录，之后该浏览器就能长期使用「控制台地址 + 访问令牌」访问。
+   >
+   > 链接有效期 10 分钟且仅能使用一次。若已过期，或需要在另一个浏览器/设备上登录，在服务实例详情页执行运维操作 **获取控制台登录链接** 重新获取即可。
 
    <img src="3.jpg" alt="3" width="1000">
 
@@ -97,70 +101,6 @@ OpenClaw（Clawdbot）是一个现代化的机器人流程自动化（RPA）平�
 
    <img src="13.png" alt="img_2" width="300">
 
-## 配置飞书
-
-### 创建飞书应用
-
-1. 访问[飞书开放平台](https://open.feishu.cn/app "")，单击 **创建企业自建应用** ，填写应用名称和描述，选择应用图标，单击 **创建** 。
-2. 左侧导航栏单击 **凭证与基础信息** 页面，复制 **App ID** （格式如 `cli_xxx`）和 **App Secret** 。
-3. 左侧导航栏单击 **权限管理** 页面，点击 **批量导入/导出权限** 按钮，粘贴以下 JSON 配置，单击 **下一步，确认新增权限** ，单击 **申请开通** 。
-
-   ```json
-   {
-     "scopes": {
-       "tenant": [
-         "aily:file:read",
-         "aily:file:write",
-         "application:application.app_message_stats.overview:readonly",
-         "application:application:self_manage",
-         "application:bot.menu:write",
-         "cardkit:card:write",
-         "contact:user.employee_id:readonly",
-         "corehr:file:download",
-         "docs:document.content:read",
-         "event:ip_list",
-         "im:chat",
-         "im:chat.access_event.bot_p2p_chat:read",
-         "im:chat.members:bot_access",
-         "im:message",
-         "im:message.group_at_msg:readonly",
-         "im:message.group_msg",
-         "im:message.p2p_msg:readonly",
-         "im:message:readonly",
-         "im:message:send_as_bot",
-         "im:resource",
-         "sheets:spreadsheet",
-         "wiki:wiki:readonly"
-       ],
-       "user": ["aily:file:read", "aily:file:write", "im:chat.access_event.bot_p2p_chat:read"]
-     }
-   }
-   ```
-4. 左侧导航栏中单击 **添加应用能力** ， 选择 **按能力添加** 页签，找到 **机器人** 卡片，单击 **配置** 。
-
-   <img src="14.png" alt="image" width="1000">
-5. 配置事件订阅。
-
-   1. **在计算巢控制台配置参数** ，填入 App_Id 与 App_Sescret 并 创建服务实例。
-   2. 在飞书开放平台左侧导航栏单击 **事件与回调** ，在 **事件配置** 页签中单击 **订阅方式** ，选择 **使用 长连接 接收事件** ，单击 **保存** 。
-   3. 在事件配置页面，单击 **添加事件** ，搜索事件`im.message.receive_v1`（接收消息），单击 **确认添加** 。
-6. 在 **版本管理与发布** 页面创建版本，填写 **应用版本号** 和 **更新说明** ，单击 **保存** ，提交审核并发布。
-
-### 配置机器人
-
-计算巢服务实例创建完成后，用户可以把机器人添加到某个群里，从而实现机器人和群内成员的互动。
-> 目前仅支持在飞书电脑端添加机器人。若需在外部群中使用机器人，可参考配置文档[机器人支持外部群和外部用户单聊](https://open.feishu.cn/document/develop-robots/add-bot-to-external-group)。
-
-1. 按照添加路径添加机器人： **···** \> **设置** \> **群机器人** \> **添加机器人** 。
-2. @机器人可向机器人发送消息，向机器人发送一条消息，机器人会回复一个配对码。
-
-   <img src="15.png" alt="image" width="500">
-3. 在WebUI页面输入`openclaw pairing approve feishu 配对码`完成配对。
-   > 
-   > 配对码是上一步机器人回复的配对码。
-
-   <img src="16.png" alt="image" width="1000">
-
 ## 配置QQ
 
 ### 创建QQ机器人
@@ -211,6 +151,19 @@ OpenClaw（Clawdbot）是一个现代化的机器人流程自动化（RPA）平�
 openclaw gateway status
 ```
 ## 服务无法访问
+
+### 打开控制台地址后停在「需要设备配对」页面
+
+这是预期行为，不是服务故障。OpenClaw 自 2026.8.1 起要求首个浏览器完成设备配对（明文 HTTP 下也不例外）。
+
+解决办法：在服务实例详情页执行运维操作 **获取控制台登录链接** ，用返回的一次性链接打开控制台即可（链接 10 分钟内有效、仅用一次）。首次登录成功后，该浏览器后续用「控制台地址 + 访问令牌」直接访问即可。
+
+注意：设备身份保存在浏览器本地。换浏览器、换电脑、用无痕窗口、或清理了浏览器数据后，都需要重新获取一次性链接。
+
+### 其他情况
+
+先确认安全组已放开 18789 端口，再参考下面的 **如何重启服务** 与 **重置配置文件** 。
+
 ## 重置服务
 
 服务实例\>运维管理\>重置服务\>配置参数创建任务：
@@ -262,16 +215,6 @@ sh /opt/.swas/run-cmd.sh restart
 APP_ID="替换为Token"
 APP_SECRET="替换成EncodingAESKey"sh
 /opt/.swas/run-cmd.sh set-channel wecom "$APP_ID" "$APP_SECRET" > /dev/null
-sh /opt/.swas/run-cmd.sh restart
-```
-
-#### 配置飞书
-
-```unknow
-#!/bin/bash
-APP_ID="替换为飞书APP_ID"
-APP_SECRET="替换为飞书APP_SECRET"
-sh /opt/.swas/run-cmd.sh set-channel feishu "$APP_ID" "$APP_SECRET" > /dev/null
 sh /opt/.swas/run-cmd.sh restart
 ```
 

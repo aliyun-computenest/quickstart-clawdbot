@@ -21,6 +21,7 @@
 #   run-cmd.sh reset [apiKey] [domestic|intl]    重置为初始状态并重新拉起（保留访问令牌）
 #   run-cmd.sh get-token                         输出 gateway 访问令牌
 #   run-cmd.sh get-url                           输出访问地址与令牌
+#   run-cmd.sh get-login-url                     输出一次性登录链接（首次用浏览器访问时需要）
 
 # 允许被 `sh run-cmd.sh ...` 调用（OOS 模板里就是这么写的），不依赖 sh 恰好是 bash
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -143,8 +144,13 @@ cmd_init() {
           http: { endpoints: { chatCompletions: { enabled: true } } },
           controlUi: {
             allowedOrigins: ["*"],
-            dangerouslyAllowHostHeaderOriginFallback: true,
-            allowInsecureAuth: true
+            # 计算巢分配的是裸 IP，浏览器发来的 Origin 与 gateway 自身认定的 host 不一致，
+            # 没有这一项 Control UI 会被判跨域拒绝。
+            dangerouslyAllowHostHeaderOriginFallback: true
+            # 注意：不要在这里加 allowInsecureAuth —— 它不属于 controlUi 的 schema，
+            # 写进去也会被 gateway 启动时的配置规范化剔除，活不过一次重启。
+            # 首个浏览器的免配对访问靠的是 `run-cmd.sh get-login-url` 生成的一次性
+            # bootstrap 链接（服务端会 auto-approve 该设备），与本节任何开关都无关。
           },
           auth: { mode: "token", token: $token }
         },
@@ -426,11 +432,65 @@ instance_ip() {
 }
 
 cmd_get_url() {
-  local ip token
+  local ip token login
   ip=$(instance_ip)
   token=$(cmd_get_token)
   echo "控制台地址: http://${ip}:${GATEWAY_PORT}"
   echo "访问令牌: ${token}"
+  echo ""
+  echo "【首次访问必读】openclaw 2026.8.1 起，即使是明文 HTTP 也要求首个浏览器完成设备"
+  echo "配对，直接打开上面的地址会停在「需要设备配对」页面。请用下面的一次性链接完成首次"
+  echo "登录，之后该浏览器就能长期用「控制台地址 + 访问令牌」访问。"
+  # 尽力附一条一次性链接。这里的输出会被 ROS 取走当作部署 Outputs，所以 dashboard 万一
+  # 尚未就绪也绝不能让本命令非零退出，否则整个部署会被判失败——失败时退回文字指引即可。
+  if login=$(cmd_get_login_url 2>/dev/null) && [ -n "$login" ]; then
+    # 前面已经交代过首次登录后的用法，剔掉 get-login-url 自带的同义提示行
+    printf '%s\n' "$login" | sed '/^提示: /d; s/^/  /'
+  else
+    echo "  链接生成失败（gateway 可能仍在启动）。请在服务实例详情页执行运维操作"
+    echo "  「获取控制台登录链接」获取。"
+  fi
+  echo "  链接过期或已被用过时，同样执行运维操作「获取控制台登录链接」重新获取。"
+}
+
+# 自 openclaw 2026.8.1 起（PR #124724 "Restore Control UI device pairing on plain HTTP"），
+# 明文 HTTP 下的 Control UI 也必须完成设备配对，光有 gateway 令牌不足以放行首个浏览器
+# —— 官方的说法是不能让共享令牌变成 bypass。官方给出的正规入口是 `openclaw dashboard`
+# 生成的 bootstrapToken 链接：一次性、10 分钟内有效，浏览器用掉之后会拿到持久的 owner
+# 凭证，此后该浏览器凭「控制台地址 + 访问令牌」即可直接进入，无需再配对。
+#
+# 这里不使用 gateway.controlUi.dangerouslyDisableDeviceAuth 关掉配对：该开关在官方 schema
+# 中没有任何描述，且有过被忽略的历史（issue #45398），不适合作为服务的默认访问路径。
+cmd_get_login_url() {
+  local ip json bootstrap expires_ms remain frag
+  ip=$(instance_ip)
+  if [ -z "$ip" ]; then
+    echo "ERROR: 未能获取实例 IP，无法拼出登录链接" >&2
+    return 1
+  fi
+
+  json=$(compose exec -T "$SERVICE_NAME" openclaw dashboard --json --no-open 2>/dev/null || true)
+  bootstrap=$(printf '%s' "$json" | jq -r '.browserUrl // empty' 2>/dev/null || true)
+  expires_ms=$(printf '%s' "$json" | jq -r '.browserBootstrapExpiresAtMs // empty' 2>/dev/null || true)
+
+  if [ -z "$bootstrap" ]; then
+    echo "ERROR: 未能生成登录链接，gateway 可能尚未就绪。dashboard 原始输出：${json:-<空>}" >&2
+    return 1
+  fi
+
+  # dashboard 返回的是容器内 127.0.0.1 视角的地址，只保留 # 之后的凭据片段，重新拼实例地址
+  frag="${bootstrap#*\#}"
+  echo "一次性登录链接: http://${ip}:${GATEWAY_PORT}/#${frag}"
+
+  if [ -n "$expires_ms" ]; then
+    remain=$(( expires_ms / 1000 - $(date +%s) ))
+    [ "$remain" -lt 0 ] && remain=0
+    echo "链接有效期: ${remain} 秒（约 $(( remain / 60 )) 分钟），且仅能使用一次"
+  fi
+
+  # 本行以「提示: 」开头，get-url 会将其滤掉后换成自己的文案（部署 Outputs 里说
+  # “本运维操作”不成立）。改动前缀时请同步 cmd_get_url 里的 sed 剔除规则。
+  echo "提示: 用浏览器打开上面的链接完成首次登录后，该浏览器即可长期使用「控制台地址 + 访问令牌」访问；链接过期或已被用过时，重新执行本运维操作即可再次获取。"
 }
 
 # ---------------------------------------------------------------------------
@@ -454,6 +514,7 @@ case "${1:-}" in
   reset)           shift; cmd_reset "$@" ;;
   get-token)       shift; cmd_get_token "$@" ;;
   get-url)         shift; cmd_get_url "$@" ;;
+  get-login-url)   shift; cmd_get_login_url "$@" ;;
   ""|help|-h|--help)
     sed -n '/^# 用法：/,/^$/p' "$0" | sed 's/^# \{0,1\}//'
     ;;
