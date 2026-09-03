@@ -738,7 +738,9 @@ Resources:
       Type: "RunShellScript"
       Sync: true
       Timeout: 3600
-      CommandContent: "#!/bin/bash\nbash /opt/openclaw/run-cmd.sh wait-ready 300 >&2\nbash /opt/openclaw/run-cmd.sh get-url\n"
+      # 本命令的输出会原样成为部署 Outputs 给客户看，所以 wait-ready 的进度日志必须
+      # 落到日志文件——RunCommand 会把 stderr 一并并进 Output，重定向到 stderr 挡不住。
+      CommandContent: "#!/bin/bash\nbash /opt/openclaw/run-cmd.sh wait-ready 300 >>/var/log/openclaw-deploy.log 2>&1\nbash /opt/openclaw/run-cmd.sh get-url\n"
 Outputs:
   OpenClaw Addresses:
     Description:
