@@ -72,10 +72,14 @@ docker build --build-arg OPENCLAW_IMAGE="$OPENCLAW_IMAGE" -t "$LOCAL_IMAGE" "$AP
 BASE_DIGEST=$(docker image inspect "$OPENCLAW_IMAGE" -f '{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}')
 IMAGE_UID=$(docker run --rm --entrypoint id "$LOCAL_IMAGE" -u)
 IMAGE_GID=$(docker run --rm --entrypoint id "$LOCAL_IMAGE" -g)
+# 跟随 latest 意味着「这次烘进去的到底是哪个版本」只有构建那一刻才知道，必须落盘。
+# 否则事后想确认版本只能上实例 docker exec，构建日志里查不到。
+OPENCLAW_VERSION=$(docker run --rm --entrypoint node "$LOCAL_IMAGE" -p "require('/app/package.json').version")
 cat > "$APP_DIR/image.env" <<EOF
 OPENCLAW_LOCAL_IMAGE=$LOCAL_IMAGE
 OPENCLAW_BASE_IMAGE=$OPENCLAW_IMAGE
 OPENCLAW_BASE_DIGEST=$BASE_DIGEST
+OPENCLAW_VERSION=$OPENCLAW_VERSION
 OPENCLAW_UID=$IMAGE_UID
 OPENCLAW_GID=$IMAGE_GID
 OPENCLAW_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
