@@ -19,13 +19,12 @@ ARG FEISHU_PLUGIN="@openclaw/feishu@latest"
 
 USER root
 
-# 下载并展开渠道插件到 OpenClaw 扩展目录
+# 钉钉 / 企业微信 / QQ 三个渠道：npm pack 手工解包到扩展目录即可，实测可加载可启动。
 RUN mkdir -p /home/node/.openclaw/extensions && \
     cd /home/node/.openclaw/extensions && \
     npm pack "${DINGTALK_PLUGIN}" && \
     npm pack "${WECOM_PLUGIN}" && \
     npm pack "${QQBOT_PLUGIN}" && \
-    npm pack "${FEISHU_PLUGIN}" && \
     for pkg in *.tgz; do \
         dir=$(echo "$pkg" | sed 's/-[0-9].*//'); \
         mkdir -p "$dir" && tar -xzf "$pkg" -C "$dir" --strip-components=1 && rm "$pkg" && \
@@ -38,7 +37,25 @@ RUN mkdir -p /home/node/.openclaw/extensions && \
 RUN mkdir -p /home/node/.openclaw/node_modules && \
     ln -sfn /app /home/node/.openclaw/node_modules/openclaw
 
-# 预建运行期目录，构建部署物时会连同 extensions 一起导出到宿主机做 bind-mount
+RUN chown -R node:node /home/node/.openclaw
+
+USER node
+
+# 飞书插件必须交给 openclaw 自带的安装器装，不能像上面三个那样手工解包。
+# 2026.9.1 起主程序对插件加了可信门禁：openChannelIngressQueue 只放行
+# origin=bundled（镜像自带的 stock 插件）或安装时被判定为 trustedOfficialInstall 的插件。
+# 手工解包出来的插件 origin=global 且没有安装记录，拿不到这个标记，飞书渠道启动即被拒：
+#   Channel ingress queue is unavailable: ... Plugin "feishu" loaded with origin "global";
+#   reinstall it from its official npm package ... to enable trusted plugin state
+# 走安装器则会装到 ~/.openclaw/npm/projects/ 下并落安装记录，同时自动把 peerDependency
+# openclaw 链到 /app。另外三个渠道插件不调这个接口，因此不受影响，无需改动。
+RUN HOME=/home/node openclaw plugins install "${FEISHU_PLUGIN}" \
+        --force --accept-capabilities --acknowledge-install-policy-warning && \
+    test -d /home/node/.openclaw/npm/projects
+
+USER root
+
+# 预建运行期目录，构建部署物时会连同 extensions、npm/projects 一起导出到宿主机做 bind-mount
 RUN mkdir -p /home/node/.openclaw/workspace \
              /home/node/.openclaw/computenest-skillhub-skills && \
     chown -R node:node /home/node/.openclaw

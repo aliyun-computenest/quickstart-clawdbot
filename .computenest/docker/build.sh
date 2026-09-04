@@ -147,10 +147,32 @@ if [ -n "$missing_plugins" ]; then
 fi
 echo "INFO: 冒烟测试通过，gateway 与 4 个渠道插件均正常"
 
+# 上面只验了插件能被加载，还验不到可信门禁：2026.9.1 起 openChannelIngressQueue 只放行
+# bundled 或 trustedOfficialInstall 的插件，而飞书是唯一调这个接口的渠道。这一层坏了的话
+# 上面所有检查照样全过，但用户一配飞书渠道就起不来，因此必须真配一次渠道把这条路径跑到。
+# 用假凭证即可：插件先取 ingress queue 再去连平台，可信判定在凭证校验之前就已经走完。
+"$APP_DIR/run-cmd.sh" set-channel feishu "cli_smoketestappid" "smoketestappsecret"
+"$APP_DIR/run-cmd.sh" restart
+"$APP_DIR/run-cmd.sh" wait-ready 600
+sleep 25
+docker compose -f "$APP_DIR/docker-compose.yaml" logs --no-color openclaw > /tmp/smoke-feishu.log
+grep -i "feishu" /tmp/smoke-feishu.log | tail -30 || true
+if grep -q "only available for trusted plugins" /tmp/smoke-feishu.log; then
+  echo "ERROR: 飞书插件未获得可信状态，渠道无法启动（必须用 openclaw plugins install 安装，不能手工解包）：" >&2
+  grep -m3 "only available for trusted plugins" /tmp/smoke-feishu.log >&2
+  exit 1
+fi
+# 渠道配上了就一定会有启动日志；一行都没说明渠道根本没被拉起，上面那个断言也就没验到东西
+if ! grep -q "\[feishu\]" /tmp/smoke-feishu.log; then
+  echo "ERROR: 日志里没有任何飞书渠道的输出，无法确认可信门禁已通过" >&2
+  exit 1
+fi
+echo "INFO: 飞书渠道已通过可信插件门禁"
+
 # ── 7. 清理，交付干净的镜像 ───────────────────────────────────────────────
 docker compose -f "$APP_DIR/docker-compose.yaml" down --remove-orphans
 "$APP_DIR/run-cmd.sh" seed-data
-rm -rf "$SRC_DIR" /tmp/smoke.log /root/.cache/pip
+rm -rf "$SRC_DIR" /tmp/smoke.log /tmp/smoke-feishu.log /root/.cache/pip
 docker image prune -f
 # 以下为镜像交付前的清理与安全加固，与其他计算巢服务的镜像构建口径保持一致。
 # 注意必须跑在上面 seed-data 之后：清理会清空 /tmp 与日志，先把数据目录坐实。
