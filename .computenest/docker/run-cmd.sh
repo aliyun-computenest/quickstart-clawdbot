@@ -11,10 +11,10 @@
 # 用法：
 #   run-cmd.sh init                              初始化数据目录、生成 gateway token 与基础配置
 #   run-cmd.sh config <apiKey> [domestic|intl]   写入百炼 API Key 与 baseUrl
-#   run-cmd.sh set-channel <type> <id> <secret>  配置渠道，type: dingtalk|wecom|qqbot
+#   run-cmd.sh set-channel <type> <id> <secret>  配置渠道，type: dingtalk|wecom|qqbot|feishu
 #   run-cmd.sh set-model <provider/model>        切换默认模型
 #   run-cmd.sh set-skills-dir [containerDir]     把 Skills 目录写入 skills.load.extraDirs
-#   run-cmd.sh enable-plugins                    仅加载 3 个渠道插件（构建期冒烟测试用）
+#   run-cmd.sh enable-plugins                    仅加载 4 个渠道插件（构建期冒烟测试用）
 #   run-cmd.sh start | stop | restart | status | logs
 #   run-cmd.sh wait-ready [timeoutSeconds]       等待 gateway 端口就绪
 #   run-cmd.sh seed-data                         用镜像内的初始内容重建数据目录（会清空现有数据）
@@ -197,13 +197,15 @@ cmd_set_model() {
   echo "INFO: 默认模型已切换为 $model"
 }
 
-# 渠道类型 -> 插件包名。plugins.entries 的 key 是插件包名，channels 的 key 由插件自身约定，
-# 两者并不总是一致（钉钉两边都叫 dingtalk-connector，其余两个 channels key 是短名）。
+# 渠道类型 -> 插件 id。plugins.entries 的 key 是插件 id，channels 的 key 由插件自身约定，
+# 两者并不总是一致（钉钉两边都叫 dingtalk-connector，飞书两边都叫 feishu，
+# 企业微信与 QQ 的 channels key 是短名）。
 plugin_of() {
   case "$1" in
     dingtalk)     echo "dingtalk-connector" ;;
     wecom)        echo "wecom-openclaw-plugin" ;;
     qqbot)        echo "openclaw-qqbot" ;;
+    feishu)       echo "feishu" ;;
     *)            return 1 ;;
   esac
 }
@@ -257,15 +259,15 @@ cmd_set_channel() {
       }')
       ;;
     feishu|lark)
-      # 飞书渠道暂时下线，原因见 Dockerfile 里 LARK_PLUGIN 处的说明：上游发布包缺 dist
-      # 目录，插件无法被加载。这里宁可明确报错，也不能写下一份永远不会生效的渠道配置。
-      # 上游修好后，把本分支恢复成原来的 feishu 配置块、并同步恢复 Dockerfile 与
-      # plugin_of / enable-plugins / build.sh 冒烟清单里的 openclaw-lark 即可。
-      echo "ERROR: 飞书渠道暂不可用（上游插件 @larksuite/openclaw-lark 发布产物缺少 dist，无法加载）" >&2
-      exit 1
+      type=feishu
+      # 官方插件 @openclaw/feishu 的 openclaw.plugin.json 里声明的 configSignals 是
+      # rootPath=channels.feishu、required=[appId, appSecret]，与这里完全对应。
+      block=$(jq -n --arg id "$id" --arg secret "$secret" '{
+        feishu: { enabled: true, appId: $id, appSecret: $secret }
+      }')
       ;;
     *)
-      echo "ERROR: 不支持的渠道类型 '$type'，可选 dingtalk|wecom|qqbot" >&2
+      echo "ERROR: 不支持的渠道类型 '$type'，可选 dingtalk|wecom|qqbot|feishu" >&2
       exit 1
       ;;
   esac
@@ -288,10 +290,11 @@ cmd_enable_plugins() {
     .plugins.entries = ((.plugins.entries // {}) + {
       "dingtalk-connector": { enabled: true },
       "wecom-openclaw-plugin": { enabled: true, hooks: { allowConversationAccess: true } },
-      "openclaw-qqbot": { enabled: true }
+      "openclaw-qqbot": { enabled: true },
+      "feishu": { enabled: true }
     })
   '
-  echo "INFO: 3 个渠道插件已置为加载状态"
+  echo "INFO: 4 个渠道插件已置为加载状态"
 }
 
 cmd_set_skills_dir() {

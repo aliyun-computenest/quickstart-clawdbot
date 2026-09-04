@@ -101,6 +101,68 @@ OpenClaw（Clawdbot）是一个现代化的机器人流程自动化（RPA）平�
 
    <img src="13.png" alt="img_2" width="300">
 
+## 配置飞书
+
+### 创建飞书应用
+
+1. 访问[飞书开放平台](https://open.feishu.cn/app "")，单击 **创建企业自建应用** ，填写应用名称和描述，选择应用图标，单击 **创建** 。
+2. 左侧导航栏单击 **凭证与基础信息** 页面，复制 **App ID** （格式如 `cli_xxx`）和 **App Secret** 。
+3. 左侧导航栏单击 **权限管理** 页面，点击 **批量导入/导出权限** 按钮，粘贴以下 JSON 配置，单击 **下一步，确认新增权限** ，单击 **申请开通** 。
+
+   ```json
+   {
+     "scopes": {
+       "tenant": [
+         "aily:file:read",
+         "aily:file:write",
+         "application:application.app_message_stats.overview:readonly",
+         "application:application:self_manage",
+         "application:bot.menu:write",
+         "cardkit:card:write",
+         "contact:user.employee_id:readonly",
+         "corehr:file:download",
+         "docs:document.content:read",
+         "event:ip_list",
+         "im:chat",
+         "im:chat.access_event.bot_p2p_chat:read",
+         "im:chat.members:bot_access",
+         "im:message",
+         "im:message.group_at_msg:readonly",
+         "im:message.group_msg",
+         "im:message.p2p_msg:readonly",
+         "im:message:readonly",
+         "im:message:send_as_bot",
+         "im:resource",
+         "sheets:spreadsheet",
+         "wiki:wiki:readonly"
+       ],
+       "user": ["aily:file:read", "aily:file:write", "im:chat.access_event.bot_p2p_chat:read"]
+     }
+   }
+   ```
+4. 左侧导航栏中单击 **添加应用能力** ， 选择 **按能力添加** 页签，找到 **机器人** 卡片，单击 **配置** 。
+
+   <img src="14.png" alt="image" width="1000">
+5. 配置事件订阅。
+
+   1. **在计算巢控制台配置参数** ，填入 App ID 与 App Secret 并 创建服务实例。
+   2. 在飞书开放平台左侧导航栏单击 **事件与回调** ，在 **事件配置** 页签中单击 **订阅方式** ，选择 **使用 长连接 接收事件** ，单击 **保存** 。
+   3. 在事件配置页面，单击 **添加事件** ，搜索事件`im.message.receive_v1`（接收消息），单击 **确认添加** 。
+6. 在 **版本管理与发布** 页面创建版本，填写 **应用版本号** 和 **更新说明** ，单击 **保存** ，提交审核并发布。
+
+### 配置机器人
+
+计算巢服务实例创建完成后，用户可以把机器人添加到某个群里，从而实现机器人和群内成员的互动。
+> 目前仅支持在飞书电脑端添加机器人。若需在外部群中使用机器人，可参考配置文档[机器人支持外部群和外部用户单聊](https://open.feishu.cn/document/develop-robots/add-bot-to-external-group)。
+
+1. 按照添加路径添加机器人： **···** \> **设置** \> **群机器人** \> **添加机器人** 。
+2. @机器人可向机器人发送消息，向机器人发送一条消息，机器人会回复一个配对码。
+
+   <img src="15.png" alt="image" width="500">
+3. 在WebUI页面输入`openclaw pairing approve feishu 配对码`完成配对。
+   > 
+   > 配对码是上一步机器人回复的配对码。
+
 ## 配置QQ
 
 ### 创建QQ机器人
@@ -225,6 +287,16 @@ sh /opt/.swas/run-cmd.sh restart
 APP_ID="替换为QQ机器人APP_ID"
 APP_SECRET="替换为QQ机器人APP_SECRET"
 sh /opt/.swas/run-cmd.sh set-channel qqbot "$APP_ID" "$APP_SECRET" > /dev/null
+sh /opt/.swas/run-cmd.sh restart
+```
+
+#### 配置飞书
+
+```unknow
+#!/bin/bash
+APP_ID="替换为飞书APP_ID"
+APP_SECRET="替换为飞书APP_SECRET"
+sh /opt/.swas/run-cmd.sh set-channel feishu "$APP_ID" "$APP_SECRET" > /dev/null
 sh /opt/.swas/run-cmd.sh restart
 ```
 

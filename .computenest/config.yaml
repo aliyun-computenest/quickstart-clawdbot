@@ -138,7 +138,7 @@ Service:
   ApprovalType: Manual
 Artifact:
   # Docker 化部署物：在香港托管构建，构建期 docker pull ghcr.io/openclaw/openclaw:latest
-  # 并二次构建装入 3 个渠道插件，把镜像烘进 ECS 系统盘，运行期零外网依赖
+  # 并二次构建装入 4 个渠道插件，把镜像烘进 ECS 系统盘，运行期零外网依赖
   # （ghcr.io 在大陆地域不可达，只能靠构建期规避）。
   #
   # 构建地域是香港，而计算巢管控面只有 cn-hangzhou，因此 draft 部署物无法直接用
@@ -148,7 +148,7 @@ Artifact:
   OpenClawDockerImage:
     ArtifactType: EcsImage
     ArtifactName: openclaw_docker_image
-    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 3 个渠道插件（钉钉/企业微信/QQ）
+    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 4 个渠道插件（钉钉/企业微信/QQ/飞书）
     ArtifactProperty:
       RegionId: cn-hongkong
     ArtifactBuildProperty:

@@ -1,7 +1,7 @@
 # OpenClaw 社区版（计算巢）运行镜像
 #
 # 在上游官方镜像基础上做二次构建，只做两件事：
-#   1. 预装 3 个渠道插件（钉钉 / 企业微信 / QQ），避免运行期访问 npm；
+#   1. 预装 4 个渠道插件（钉钉 / 企业微信 / QQ / 飞书），避免运行期访问 npm；
 #   2. 把宿主包 /app 暴露给插件，解决新版插件 ESM 裸导入解析失败的问题。
 #
 # 不覆盖 ENTRYPOINT / CMD，沿用上游的 `tini -s -- node openclaw.mjs gateway`。
@@ -12,11 +12,10 @@ FROM ${OPENCLAW_IMAGE}
 ARG DINGTALK_PLUGIN="@dingtalk-real-ai/dingtalk-connector@latest"
 ARG WECOM_PLUGIN="@wecom/wecom-openclaw-plugin@latest"
 ARG QQBOT_PLUGIN="@tencent-connect/openclaw-qqbot@latest"
-# 飞书插件 @larksuite/openclaw-lark 暂时不装。它的 package.json 声明 main 指向
-# ./dist/index.js，但 2026.7.16（latest）与 2026.8.5-beta.0 的发布包里都没有 dist 目录，
-# Node 只能退回未打包的根 index.js，那里 require("openclaw/plugin-sdk") 撞上 openclaw
-# 已移除的聚合入口（exports 只保留 ./plugin-sdk/<子模块>），插件必然
-# ERR_PACKAGE_PATH_NOT_EXPORTED。等上游补齐发布产物后加回本行即可。
+# 飞书渠道的官方插件是 @openclaw/feishu（渠道注册表 channel-catalog.json 里登记的就是它），
+# 与主程序同版本号同步发布。注意不要错认成第三方的 @larksuite/openclaw-lark，那个包的
+# 发布产物缺 dist、装上必然加载失败。
+ARG FEISHU_PLUGIN="@openclaw/feishu@latest"
 
 USER root
 
@@ -26,6 +25,7 @@ RUN mkdir -p /home/node/.openclaw/extensions && \
     npm pack "${DINGTALK_PLUGIN}" && \
     npm pack "${WECOM_PLUGIN}" && \
     npm pack "${QQBOT_PLUGIN}" && \
+    npm pack "${FEISHU_PLUGIN}" && \
     for pkg in *.tgz; do \
         dir=$(echo "$pkg" | sed 's/-[0-9].*//'); \
         mkdir -p "$dir" && tar -xzf "$pkg" -C "$dir" --strip-components=1 && rm "$pkg" && \

@@ -134,7 +134,7 @@ if [ -z "$loaded" ]; then
 fi
 echo "INFO: gateway 已加载插件：$loaded"
 missing_plugins=""
-for plugin in dingtalk-connector wecom-openclaw-plugin openclaw-qqbot; do
+for plugin in dingtalk-connector wecom-openclaw-plugin openclaw-qqbot feishu; do
   # 清单形如 "a, b, c; 2.6s"，去空格并把分号也当分隔符，再做整词匹配
   case ",$(echo "$loaded" | tr -d ' ' | tr ';' ',')," in
     *",$plugin,"*) ;;
@@ -145,7 +145,7 @@ if [ -n "$missing_plugins" ]; then
   echo "ERROR: 以下渠道插件不在 gateway 的已加载清单中：$missing_plugins" >&2
   exit 1
 fi
-echo "INFO: 冒烟测试通过，gateway 与 3 个渠道插件均正常"
+echo "INFO: 冒烟测试通过，gateway 与 4 个渠道插件均正常"
 
 # ── 7. 清理，交付干净的镜像 ───────────────────────────────────────────────
 docker compose -f "$APP_DIR/docker-compose.yaml" down --remove-orphans
