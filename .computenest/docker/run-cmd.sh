@@ -88,6 +88,30 @@ edit_config() {
   jq "$@" "$filter" "$CONFIG_FILE" | write_config
 }
 
+# Control UI 的跨域白名单。gateway 只在两种情况下放行浏览器来源：来源逐条命中
+# allowedOrigins，或者「Origin 的 host 与 Host 头一致、且该 host 是私网/回环地址」这种
+# 同源情形。公网 IP 两条都不满足，所以必须把实例的公网来源显式写进白名单，否则浏览器
+# 从公网打开页面会在 WebSocket 升级阶段被拒（code=1008 origin not allowed）。这个判定在
+# 鉴权之前，跟设备配对无关，换多少次 bootstrap 一次性链接都绕不过去。
+# 计算巢分配的是裸 IP 且可能在 init 之后才绑上 EIP，而 start/restart 都会走 cmd_init，
+# 因此每次启停都重算一遍，IP 变了也能自愈。
+control_ui_origins() {
+  local eip priv
+  eip=$(curl -sf -m 3 http://100.100.100.200/latest/meta-data/eipv4 2>/dev/null || true)
+  if [ -z "$eip" ]; then
+    eip=$(curl -sf -m 3 http://100.100.100.200/latest/meta-data/public-ipv4 2>/dev/null || true)
+  fi
+  priv=$(curl -sf -m 3 http://100.100.100.200/latest/meta-data/private-ipv4 2>/dev/null || true)
+  # 这里刻意用 if 而不是 `[ -n "$x" ] && echo`：本脚本开了 set -e -o pipefail，
+  # 短路写法在取不到 IP 时会让整个管道的退出码变得不好判断，不值得省这两行。
+  {
+    if [ -n "$eip" ]; then echo "http://${eip}:${GATEWAY_PORT}"; fi
+    if [ -n "$priv" ]; then echo "http://${priv}:${GATEWAY_PORT}"; fi
+    echo "http://localhost:${GATEWAY_PORT}"
+    echo "http://127.0.0.1:${GATEWAY_PORT}"
+  } | jq -R . | jq -s 'unique'
+}
+
 cmd_init() {
   mkdir -p "$DATA_DIR/workspace" "$DATA_DIR/computenest-skillhub-skills"
 
@@ -98,38 +122,28 @@ cmd_init() {
   local token
   token=$(cat "$TOKEN_FILE")
 
-  if [ -f "$CONFIG_FILE" ]; then
-    # 已初始化过：只补齐 gateway 段，不覆盖用户在控制台上的其他改动
-    edit_config '
-      .gateway.mode = "local"
-      | .gateway.port = 18789
-      | .gateway.bind = "lan"
-      | .gateway.auth = { mode: "token", token: $token }
-    ' --arg token "$token"
-  else
-    jq -n \
+  local origins
+  origins=$(control_ui_origins)
+
+  # 下面这两份就是 init 的全部产出，任何时候执行都要完整落地。
+  #
+  # 千万不要退化成「配置文件已存在就只补几个键」的增量写法：镜像里本来就带着一份
+  # /home/node/.openclaw/openclaw.json —— 那是 Dockerfile 里 `openclaw plugins install`
+  # 装飞书插件时 openclaw 自己写出来的（只有 plugins / meta 两段），而 seed-data 会把镜像内容
+  # 拷到宿主数据目录，于是部署时配置文件早就存在了。按「已存在」走增量分支的话，只出现在
+  # 首次分支里的键全都不会写入，实测丢的是 gateway.controlUi（公网访问报 origin not allowed）、
+  # gateway.http.endpoints.chatCompletions（端点没开）、agents.defaults.workspace（工作区不对）。
+  #
+  # 但也不能反过来把整份模板无条件盖上去：模型、百炼 Key、渠道这些是用户能在运维操作里改的，
+  # 而 start / restart 都会走 cmd_init，盖一次就等于把用户的设置抹回默认值（Key 会被清空）。
+  # 所以分成两份：owned 是本服务自己说了算的键，每次都覆盖；seed 只在对应键缺失时垫底。
+  local owned seed current
+  owned=$(jq -n \
       --arg token "$token" \
-      --arg model "$DEFAULT_MODEL" \
-      --arg baseUrl "$BASE_URL_DOMESTIC" \
       --arg workspace "$CONTAINER_CONFIG_DIR/workspace" \
+      --argjson origins "$origins" \
       '{
-        agents: {
-          defaults: {
-            model: { primary: $model },
-            workspace: $workspace
-          }
-        },
-        models: {
-          mode: "merge",
-          providers: {
-            bailian: {
-              baseUrl: $baseUrl,
-              apiKey: "",
-              api: "openai-completions",
-              models: []
-            }
-          }
-        },
+        agents: { defaults: { workspace: $workspace } },
         commands: {
           native: "auto",
           nativeSkills: "auto",
@@ -143,21 +157,55 @@ cmd_init() {
           bind: "lan",
           http: { endpoints: { chatCompletions: { enabled: true } } },
           controlUi: {
-            allowedOrigins: ["*"],
-            # 计算巢分配的是裸 IP，浏览器发来的 Origin 与 gateway 自身认定的 host 不一致，
-            # 没有这一项 Control UI 会被判跨域拒绝。
-            dangerouslyAllowHostHeaderOriginFallback: true
-            # 注意：不要在这里加 allowInsecureAuth —— 它不属于 controlUi 的 schema，
-            # 写进去也会被 gateway 启动时的配置规范化剔除，活不过一次重启。
-            # 首个浏览器的免配对访问靠的是 `run-cmd.sh get-login-url` 生成的一次性
-            # bootstrap 链接（服务端会 auto-approve 该设备），与本节任何开关都无关。
+            # 逐条列出完整来源，理由见 control_ui_origins。
+            # 不要改用 dangerouslyAllowHostHeaderOriginFallback：它确实生效，但会把
+            # 「Origin 的 host 等于 Host 头」也当成放行条件，来源校验就形同虚设，
+            # 而且 gateway 每次启动都会打安全告警。显式白名单已经够用。
+            # 也不要加 allowInsecureAuth：它不属于 controlUi 的 schema，写了不起作用。
+            # 首个浏览器的免配对访问靠 `run-cmd.sh get-login-url` 生成的一次性
+            # bootstrap 链接（服务端会 auto-approve 该设备），与本节任何开关无关。
+            allowedOrigins: $origins
           },
           auth: { mode: "token", token: $token }
+        }
+      }')
+  seed=$(jq -n \
+      --arg model "$DEFAULT_MODEL" \
+      --arg baseUrl "$BASE_URL_DOMESTIC" \
+      '{
+        agents: { defaults: { model: { primary: $model } } },
+        models: {
+          mode: "merge",
+          providers: {
+            bailian: {
+              baseUrl: $baseUrl,
+              apiKey: "",
+              api: "openai-completions",
+              models: []
+            }
+          }
         },
         plugins: { entries: {} },
         channels: {}
-      }' | write_config
+      }')
+
+  current="{}"
+  if [ -f "$CONFIG_FILE" ]; then
+    current=$(cat "$CONFIG_FILE")
   fi
+
+  # jq 的 `a * b` 是递归合并、右侧优先，于是 `(seed * 现有) * owned` 刚好表达
+  # 「seed 垫底 → 现有配置压过 seed → owned 压过一切」。数组不参与递归合并而是整体替换，
+  # 所以白名单先自己算好并集，顺手剔掉历史遗留的 "*"（gateway 确实认这个写法，
+  # 但那等于不校验来源，没必要留着）。
+  printf '%s' "$current" | jq \
+      --argjson seed "$seed" --argjson owned "$owned" '
+        (((.gateway.controlUi.allowedOrigins // [])
+          + ($owned.gateway.controlUi.allowedOrigins // []))
+         | map(select(. != "*")) | unique) as $allOrigins
+        | (($seed * .) * $owned)
+        | .gateway.controlUi.allowedOrigins = $allOrigins
+      ' | write_config
 
   chown -R "$RUN_UID:$RUN_GID" "$DATA_DIR"
 }

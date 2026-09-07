@@ -169,6 +169,111 @@ if ! grep -q "\[feishu\]" /tmp/smoke-feishu.log; then
 fi
 echo "INFO: 飞书渠道已通过可信插件门禁"
 
+# 到这里容器已经被 set-channel / restart 折腾过几轮，正好验一次 init 的产出是否完整。
+# 这类故障没有任何报错：日志干净、端口通、插件全在，但缺了 gateway.controlUi 用户从公网
+# 打开页面就会在 WebSocket 升级阶段被拒（origin not allowed，发生在鉴权之前，换多少次
+# 一次性链接都绕不过去），缺了 chatCompletions 端点则是模型调不通。曾经真出过一次：
+# 镜像里带了一份 openclaw 自己写的 openclaw.json，init 便按「配置已存在」只补了几个键。
+CFG="$APP_DIR/data/openclaw.json"
+SELF_IP=$(curl -sf -m 3 http://100.100.100.200/latest/meta-data/private-ipv4 2>/dev/null || echo 127.0.0.1)
+SELF_ORIGIN="http://${SELF_IP}:18789"
+missing_keys=$(jq -r --arg o "$SELF_ORIGIN" '
+  [ if (.gateway.controlUi.allowedOrigins // [] | index($o)) then empty
+    else "gateway.controlUi.allowedOrigins 不含 \($o)" end,
+    if .gateway.mode == "local" then empty else "gateway.mode != local" end,
+    if .gateway.http.endpoints.chatCompletions.enabled == true then empty
+    else "gateway.http.endpoints.chatCompletions.enabled != true" end,
+    if (.gateway.auth.token // "") != "" then empty else "gateway.auth.token 为空" end,
+    if (.agents.defaults.workspace // "") != "" then empty else "agents.defaults.workspace 为空" end
+  ] | join("; ")' "$CFG")
+if [ -n "$missing_keys" ]; then
+  echo "ERROR: init 产出的配置不完整：$missing_keys" >&2
+  jq -c '{agents:.agents.defaults,gateway:.gateway}' "$CFG" >&2
+  exit 1
+fi
+echo "INFO: 配置完整性检查通过"
+
+# 键写进去了还不等于语义对，所以再拿 gateway 自己的判定函数验一次白名单。
+# 注意不能用 curl 发 WS 升级来验：origin 校验只对 CONTROL_UI / BROWSER_COPILOT / webchat
+# 这几类客户端生效，裸 curl 压根进不了那个分支；而且构建机是私网 IP，会命中
+# 「Origin.host == Host 且 host 为私网」的同源放行，根本走不到白名单判定 ——
+# 两重假阳性叠在一起，那样的探针永远通过。这里改为直接调 checkBrowserOrigin，
+# 并把 requestHost 填成一个公网地址来避开同源兜底，才真正验到 allowlist 这条路径。
+ORIGINS_JSON=$(jq -c '.gateway.controlUi.allowedOrigins' "$CFG")
+PROBE_ORIGIN=$(jq -r '[.gateway.controlUi.allowedOrigins[]
+  | select(contains("localhost") or contains("127.0.0.1") | not)][0] // ""' "$CFG")
+if [ -z "$PROBE_ORIGIN" ]; then
+  echo "WARNING: 白名单里只有回环来源（构建机取不到实例 IP），跳过跨域语义校验"
+else
+  # 走文件而不是 node -e：探针脚本本身带引号和 JSON，塞进 shell 命令行里极易被转义坑到。
+  # 数据目录已经 bind mount 到容器的 /home/node/.openclaw，写宿主侧即可。
+  cat > "$APP_DIR/data/origin-probe.mjs" <<'PROBE_EOF'
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+const dir = "/app/dist";
+// 上游是打包产物：文件名带 hash，导出名还被压成了单字母（实测是
+// `export { ... checkBrowserOrigin as t }`），所以既不能按文件名找，也不能按导出名取。
+// 先按函数定义定位文件，再从 export 语句里把真实导出名解出来。
+let fn = null;
+let from = null;
+for (const f of readdirSync(dir).filter((f) => f.endsWith(".js"))) {
+  const src = readFileSync(path.join(dir, f), "utf8");
+  if (!src.includes("function checkBrowserOrigin")) continue;
+  const m = src.match(
+    /export\s*\{[^}]*\bcheckBrowserOrigin(?:\s+as\s+([A-Za-z0-9_$]+))?\s*[,}]/,
+  );
+  if (!m) continue;
+  const mod = await import(path.join(dir, f));
+  const cand = mod[m[1] || "checkBrowserOrigin"];
+  if (typeof cand === "function") {
+    fn = cand;
+    from = `${f} 导出名 ${m[1] || "checkBrowserOrigin"}`;
+    break;
+  }
+}
+if (!fn) {
+  console.log("SKIP: /app/dist 里定位不到 checkBrowserOrigin，上游可能已重构");
+  process.exit(0);
+}
+const checkBrowserOrigin = fn;
+
+const allowedOrigins = JSON.parse(process.env.PROBE_ALLOWED);
+// 203.0.113.0/24 是文档保留段，不是私网也不会等于任何真实来源的 host，
+// 用它当 Host 头就能确保 host-header-fallback 和 private-same-origin 两条兜底都不命中
+const base = { requestHost: "203.0.113.9:18789", allowedOrigins, isLocalClient: false };
+const allowed = checkBrowserOrigin({ ...base, origin: process.env.PROBE_ORIGIN });
+const denied = checkBrowserOrigin({ ...base, origin: "http://203.0.113.250:18789" });
+
+if (allowed.matchedBy !== "allowlist") {
+  console.log(`FAIL: 白名单内来源 ${process.env.PROBE_ORIGIN} 未命中白名单：${JSON.stringify(allowed)}`);
+  process.exit(1);
+}
+// 反向用例是防止断言退化：万一哪天变成无条件放行，正向那条照样是绿的
+if (denied.ok !== false) {
+  console.log(`FAIL: 白名单外来源也被放行，来源校验已形同虚设：${JSON.stringify(denied)}`);
+  process.exit(1);
+}
+console.log(`OK: ${process.env.PROBE_ORIGIN} 命中白名单，白名单外来源被拒（判定来自 ${from}）`);
+PROBE_EOF
+  chmod 644 "$APP_DIR/data/origin-probe.mjs"
+  if probe_out=$(docker compose -f "$APP_DIR/docker-compose.yaml" exec -T \
+      -e PROBE_ALLOWED="$ORIGINS_JSON" -e PROBE_ORIGIN="$PROBE_ORIGIN" \
+      openclaw node /home/node/.openclaw/origin-probe.mjs 2>&1); then
+    echo "$probe_out"
+    # 定位不到判定函数只说明上游改了内部结构，不该因此判构建失败，但要留个响声
+    case "$probe_out" in
+      *SKIP:*) echo "WARNING: 跨域语义未验证，请人工确认公网访问可用" ;;
+    esac
+  else
+    echo "$probe_out" >&2
+    echo "ERROR: Control UI 跨域白名单语义校验未通过，公网访问会被拒" >&2
+    rm -f "$APP_DIR/data/origin-probe.mjs"
+    exit 1
+  fi
+  rm -f "$APP_DIR/data/origin-probe.mjs"
+fi
+
 # ── 7. 清理，交付干净的镜像 ───────────────────────────────────────────────
 docker compose -f "$APP_DIR/docker-compose.yaml" down --remove-orphans
 "$APP_DIR/run-cmd.sh" seed-data
