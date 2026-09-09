@@ -89,9 +89,9 @@ Service:
         Type: OOS
         TemplateUrl: oos_templates/config_channel.yaml
         Operator: All
-      # 只挂"新建ECS"：openclaw 2026.8.1 起明文 HTTP 也强制设备配对，首个浏览器需要一次性
-      # 登录链接才能进入控制台。链接 10 分钟过期，因此不能放进部署 Outputs 的静态快照，
-      # 必须做成可随时重新生成的运维操作。"选择ECS"仍是老 SWAS 镜像，没有该子命令。
+      # 只挂"新建ECS"：部署 Outputs 里的地址与令牌是部署当时的静态快照，重置服务、重建
+      # 容器后令牌会变，所以保留一个能随时重新取值的运维操作。"选择ECS"仍是老 SWAS
+      # 镜像，输出格式不同，不挂。
       - TemplateNames:
         - 新建ECS
         Name: 获取控制台登录链接
@@ -148,7 +148,8 @@ Artifact:
   OpenClawDockerImage:
     ArtifactType: EcsImage
     ArtifactName: openclaw_docker_image
-    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 4 个渠道插件（钉钉/企业微信/QQ/飞书）
+    Description: OpenClaw 社区版 Docker 化运行镜像，预置 openclaw-cn:latest 与 4 
+      个渠道插件（钉钉/企业微信/QQ/飞书）
     ArtifactProperty:
       RegionId: cn-hongkong
     ArtifactBuildProperty:

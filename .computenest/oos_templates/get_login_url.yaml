@@ -1,7 +1,7 @@
 FormatVersion: OOS-2019-06-01
 Description:
-  en: Generate a one-time login link for the OpenClaw console
-  zh-cn: 生成 OpenClaw 控制台的一次性登录链接
+  en: Retrieve the OpenClaw console URL and access token
+  zh-cn: 获取 OpenClaw 控制台地址与访问令牌
 Parameters:
   regionId:
     Type: String
@@ -44,15 +44,26 @@ Tasks:
         - linux
     Action: ACS::ECS::RunCommand
     Description:
-      en: Generate the one-time login link by run command
-      zh-cn: 通过执行命令生成一次性登录链接
+      en: Retrieve the console URL and access token by run command
+      zh-cn: 通过执行命令获取控制台地址与访问令牌
     Properties:
       regionId: '{{ regionId }}'
       instanceId: '{{ getInstance.InstanceId }}'
       commandType: RunShellScript
+      # 不用 get-login-url：2026.9.x 的 openclaw 在一次性链接里加了
+      # gatewayUrl=ws://127.0.0.1:18789，浏览器会去连自己本机的 WebSocket，链接实测
+      # 不可用。改为输出地址与令牌，首次登录用实例内审批设备完成。
+      # 提取时按数据特征而不是中文标签取值，不依赖镜像里的文案。
       commandContent: |-
         #!/bin/bash
-        sh /opt/.swas/run-cmd.sh get-login-url
+        o=$(sh /opt/.swas/run-cmd.sh get-url 2>&1)
+        c=$(printf '%s\n' "$o" | grep -om1 'http://[0-9.]*:[0-9]*')
+        t=$(printf '%s\n' "$o" | grep -om1 '[0-9a-f]\{32,\}')
+        echo "控制台地址: ${c:-获取失败，请在实例内查看 /var/log/openclaw-deploy.log}"
+        echo "访问令牌: ${t:-获取失败，请在实例内查看 /var/log/openclaw-deploy.log}"
+        echo "首次用某个浏览器登录会停在「需要设备配对」页面，在本实例执行下面的命令批准后即可进入："
+        echo "  docker exec openclaw openclaw devices approve <配对请求ID>"
+        echo "请求 ID 可从页面上读取，或执行 docker exec openclaw openclaw devices list 从 Pending 一栏查看。"
     Outputs:
       loginUrl:
         Type: String
@@ -61,6 +72,6 @@ Outputs:
   loginUrl:
     Type: String
     Label:
-      en: One-time login link
-      zh-cn: 一次性登录链接
+      en: Console URL and access token
+      zh-cn: 控制台地址与访问令牌
     Value: '{{ GetLoginUrlByRunCommand.loginUrl }}'
