@@ -806,23 +806,78 @@ Resources:
       Type: "RunShellScript"
       Sync: true
       Timeout: 3600
-      # 本命令的输出会原样成为部署 Outputs 给客户看，所以 wait-ready 的进度日志必须
-      # 落到日志文件——RunCommand 会把 stderr 一并并进 Output，重定向到 stderr 挡不住。
-      CommandContent: "#!/bin/bash\nbash /opt/openclaw/run-cmd.sh wait-ready 300 >>/var/log/openclaw-deploy.log 2>&1\nbash /opt/openclaw/run-cmd.sh get-url\n"
+      # 本命令的唯一 stdout 会被下面的 Outputs 拆成多个字段给客户看，所以除了最后那行
+      # JSON，其余输出（含 stderr——RunCommand 会把它并进 Output）都必须落到日志文件。
+      #
+      # 这里从 get-url 的文本里按「数据特征」而不是「中文标签」取值：控制台地址取第一个
+      # ip:port 形式的 URL，访问令牌取第一段 32 位以上的十六进制串（一次性链接里的
+      # bootstrapToken 是 base64url，含 - 和 _，不会被误匹配，且它出现在令牌之后），
+      # 一次性链接取含 bootstrapToken 的 URL。这样镜像里的说明文案怎么改都不会解析失败。
+      CommandContent: |-
+        #!/bin/bash
+        L=/var/log/openclaw-deploy.log
+        bash /opt/openclaw/run-cmd.sh wait-ready 300 >>"$L" 2>&1
+        o=$(bash /opt/openclaw/run-cmd.sh get-url 2>>"$L")
+        c=$(printf '%s\n' "$o" | grep -om1 'http://[0-9.]*:[0-9]*')
+        t=$(printf '%s\n' "$o" | grep -om1 '[0-9a-f]\{32,\}')
+        l=$(printf '%s\n' "$o" | grep -om1 'http://[^ ]*bootstrapToken[^ ]*')
+        [ -n "$c" ] || c='获取失败，请在实例内查看 /var/log/openclaw-deploy.log'
+        [ -n "$t" ] || t='获取失败，请在实例内查看 /var/log/openclaw-deploy.log'
+        [ -n "$l" ] || l='生成失败（gateway 可能仍在启动），请执行运维操作「获取控制台登录链接」重新获取'
+        jq -nc --arg c "$c" --arg t "$t" --arg l "$l" '{console:$c,token:$t,link:$l}'
+# 拆成多个字段而不是一整段文字，是为了让地址和令牌能被单独复制。注意 Outputs 在控制台上
+# 不按此处的书写顺序展示，所以任何一个字段的文案都不能出现“上面/下面”这类位置指代。
 Outputs:
-  OpenClaw Addresses:
+  控制台地址:
     Description:
-      zh-cn: "OpenClaw 访问信息（含首次登录用的一次性链接）"
-      en: "OpenClaw access info (includes the one-time link for first login)"
+      zh-cn: "完成首次设备配对后，长期用它加访问令牌进入"
+      en: "Console URL, usable with the access token after the first device pairing"
     Value:
-      Fn::Base64Decode:
-        Fn::GetJsonValue:
-        - "Output"
-        - Fn::Select:
-          - 0
-          - Fn::GetAtt:
-            - "GetURLByRunCommand"
-            - "InvokeResults"
+      Fn::GetJsonValue:
+      - "console"
+      - Fn::Base64Decode:
+          Fn::GetJsonValue:
+          - "Output"
+          - Fn::Select:
+            - 0
+            - Fn::GetAtt:
+              - "GetURLByRunCommand"
+              - "InvokeResults"
+  访问令牌:
+    Description:
+      zh-cn: "控制台的访问令牌"
+      en: "Access token for the console"
+    Value:
+      Fn::GetJsonValue:
+      - "token"
+      - Fn::Base64Decode:
+          Fn::GetJsonValue:
+          - "Output"
+          - Fn::Select:
+            - 0
+            - Fn::GetAtt:
+              - "GetURLByRunCommand"
+              - "InvokeResults"
+  首次登录链接（10 分钟内有效，仅可使用一次）:
+    Description:
+      zh-cn: "用于完成首次设备配对，过期后可通过运维操作重新获取"
+      en: "One-time link for the first device pairing; regenerate it via the management operation once expired"
+    Value:
+      Fn::GetJsonValue:
+      - "link"
+      - Fn::Base64Decode:
+          Fn::GetJsonValue:
+          - "Output"
+          - Fn::Select:
+            - 0
+            - Fn::GetAtt:
+              - "GetURLByRunCommand"
+              - "InvokeResults"
+  使用说明:
+    Description:
+      zh-cn: "首次访问与更换设备的说明"
+      en: "How to access for the first time and when switching devices"
+    Value: "首次访问必须使用「首次登录链接」完成设备配对，仅凭访问令牌无法进入；完成一次后，该浏览器即可长期使用「控制台地址 + 访问令牌」访问。更换浏览器、更换电脑或使用无痕窗口都相当于一台新设备，需要重新获取链接。链接过期、已被使用或需要为新设备取用时，在服务实例详情页执行运维操作「获取控制台登录链接」重新生成。"
 Metadata:
   ALIYUN::ROS::Interface:
     Hidden:
