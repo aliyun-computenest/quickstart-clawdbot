@@ -1,7 +1,7 @@
 FormatVersion: OOS-2019-06-01
 Description:
-  en: Retrieve the OpenClaw console URL and access token
-  zh-cn: 获取 OpenClaw 控制台地址与访问令牌
+  en: Retrieve the OpenClaw console login link
+  zh-cn: 获取 OpenClaw 控制台登录链接
 Parameters:
   regionId:
     Type: String
@@ -44,26 +44,33 @@ Tasks:
         - linux
     Action: ACS::ECS::RunCommand
     Description:
-      en: Retrieve the console URL and access token by run command
-      zh-cn: 通过执行命令获取控制台地址与访问令牌
+      en: Retrieve the console login link by run command
+      zh-cn: 通过执行命令获取控制台登录链接
     Properties:
       regionId: '{{ regionId }}'
       instanceId: '{{ getInstance.InstanceId }}'
       commandType: RunShellScript
-      # 不用 get-login-url：2026.9.x 的 openclaw 在一次性链接里加了
-      # gatewayUrl=ws://127.0.0.1:18789，浏览器会去连自己本机的 WebSocket，链接实测
-      # 不可用。改为输出地址与令牌，首次登录用实例内审批设备完成。
+      # 不用 get-login-url 打印的一次性链接：它带 gatewayUrl=ws://127.0.0.1:18789，浏览器会
+      # 去连自己本机的 WebSocket，实测打不开，而且只有 10 分钟、仅能用一次。这里把地址和令牌
+      # 拼成 <控制台地址>/#token=<访问令牌>，令牌不变即长期有效，配合实例上的 openclaw-autopair
+      # 守护进程（自动批准设备配对）打开即可直接进入。
       # 提取时按数据特征而不是中文标签取值，不依赖镜像里的文案。
       commandContent: |-
         #!/bin/bash
         o=$(sh /opt/.swas/run-cmd.sh get-url 2>&1)
         c=$(printf '%s\n' "$o" | grep -om1 'http://[0-9.]*:[0-9]*')
         t=$(printf '%s\n' "$o" | grep -om1 '[0-9a-f]\{32,\}')
-        echo "控制台地址: ${c:-获取失败，请在实例内查看 /var/log/openclaw-deploy.log}"
-        echo "访问令牌: ${t:-获取失败，请在实例内查看 /var/log/openclaw-deploy.log}"
-        echo "首次用某个浏览器登录会停在「需要设备配对」页面，在本实例执行下面的命令批准后即可进入："
-        echo "  docker exec openclaw openclaw devices approve <配对请求ID>"
-        echo "请求 ID 可从页面上读取，或执行 docker exec openclaw openclaw devices list 从 Pending 一栏查看。"
+        if [ -z "$c" ] || [ -z "$t" ]; then
+          echo "获取失败，请在实例内查看 /var/log/openclaw-deploy.log"
+          exit 0
+        fi
+        echo "登录链接: $c/#token=$t"
+        echo "控制台地址: $c"
+        echo "访问令牌: $t"
+        echo "在浏览器打开登录链接即可进入控制台，链接长期有效，换浏览器或换电脑同样可用。"
+        echo "打开时若短暂出现「批准此浏览器」页面，无需操作，几秒后会自动进入。"
+        systemctl is-active --quiet openclaw-autopair \
+          || echo "提示: 自动配对服务未运行，请在本实例执行 systemctl start openclaw-autopair 后重试。"
     Outputs:
       loginUrl:
         Type: String
@@ -72,6 +79,6 @@ Outputs:
   loginUrl:
     Type: String
     Label:
-      en: Console URL and access token
-      zh-cn: 控制台地址与访问令牌
+      en: Console login link
+      zh-cn: 控制台登录链接
     Value: '{{ GetLoginUrlByRunCommand.loginUrl }}'

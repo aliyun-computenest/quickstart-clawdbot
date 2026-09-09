@@ -1,0 +1,15 @@
+[Unit]
+Description=Auto-approve OpenClaw Control UI device pairing requests
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/opt/openclaw/openclaw-autopair.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/openclaw-autopair.log
+StandardError=append:/var/log/openclaw-autopair.log
+
+[Install]
+WantedBy=multi-user.target

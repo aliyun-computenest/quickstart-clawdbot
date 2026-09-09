@@ -814,9 +814,10 @@ Resources:
       # base64url，含大写字母和 _，不会被这个模式误匹配）。这样镜像里的说明文案怎么改
       # 都不会解析失败。
       #
-      # 不输出 get-url 里那条一次性登录链接：2026.9.x 的 dashboard --json 在链接里加了
-      # gatewayUrl=ws://127.0.0.1:18789，浏览器会照着去连自己本机的 WebSocket，必然失败，
-      # 这条链接实测不可用。首次访问改走「访问令牌登录 + 实例内审批设备」，见「使用说明」。
+      # 不用 get-url 打印的那条一次性登录链接：它带 gatewayUrl=ws://127.0.0.1:18789，浏览器
+      # 会照着去连自己本机的 WebSocket，实测打不开，而且只有 10 分钟、仅能用一次。这里改为把
+      # 地址和令牌拼成 <控制台地址>/#token=<访问令牌>，令牌不变即长期有效，配合
+      # 镜像里开机自启的 openclaw-autopair 守护（自动批准设备配对），打开即可直接进入控制台。
       CommandContent: |-
         #!/bin/bash
         L=/var/log/openclaw-deploy.log
@@ -824,16 +825,36 @@ Resources:
         o=$(bash /opt/openclaw/run-cmd.sh get-url 2>>"$L")
         c=$(printf '%s\n' "$o" | grep -om1 'http://[0-9.]*:[0-9]*')
         t=$(printf '%s\n' "$o" | grep -om1 '[0-9a-f]\{32,\}')
+        if [ -n "$c" ] && [ -n "$t" ]; then
+          u="$c/#token=$t"
+        else
+          u='获取失败，请在实例内查看 /var/log/openclaw-deploy.log'
+        fi
         [ -n "$c" ] || c='获取失败，请在实例内查看 /var/log/openclaw-deploy.log'
         [ -n "$t" ] || t='获取失败，请在实例内查看 /var/log/openclaw-deploy.log'
-        jq -nc --arg c "$c" --arg t "$t" '{console:$c,token:$t}'
+        jq -nc --arg c "$c" --arg t "$t" --arg u "$u" '{console:$c,token:$t,link:$u}'
 # 拆成多个字段而不是一整段文字，是为了让地址和令牌能被单独复制。注意 Outputs 在控制台上
 # 不按此处的书写顺序展示，所以任何一个字段的文案都不能出现“上面/下面”这类位置指代。
 Outputs:
+  登录链接:
+    Description:
+      zh-cn: "在浏览器打开即可进入控制台，长期有效"
+      en: "Open it in a browser to enter the console; the link stays valid"
+    Value:
+      Fn::GetJsonValue:
+      - "link"
+      - Fn::Base64Decode:
+          Fn::GetJsonValue:
+          - "Output"
+          - Fn::Select:
+            - 0
+            - Fn::GetAtt:
+              - "GetURLByRunCommand"
+              - "InvokeResults"
   控制台地址:
     Description:
-      zh-cn: "在浏览器打开它，用访问令牌登录"
-      en: "Open it in a browser and sign in with the access token"
+      zh-cn: "控制台地址，单独打开需要手动填入访问令牌"
+      en: "Console address; opening it alone requires entering the access token"
     Value:
       Fn::GetJsonValue:
       - "console"
@@ -862,9 +883,9 @@ Outputs:
               - "InvokeResults"
   使用说明:
     Description:
-      zh-cn: "首次访问与更换设备的说明"
-      en: "How to access for the first time and when switching devices"
-    Value: "在浏览器打开「控制台地址」，填入「访问令牌」登录。openclaw 2026.8.1 起要求每台新设备完成配对，所以首个浏览器会停在「需要设备配对」页面并显示一个配对请求 ID。此时用部署时设置的 root 密码登录这台 ECS，执行 docker exec openclaw openclaw devices approve <配对请求ID> 批准，浏览器即可进入主界面（openclaw 命令只存在于容器内，务必带 docker exec openclaw 前缀，否则会报 command not found）。若页面上没显示请求 ID，可先执行 docker exec openclaw openclaw devices list 从 Pending 一栏查到它。该浏览器批准过一次后，之后凭「控制台地址 + 访问令牌」即可长期访问；更换浏览器、更换电脑或使用无痕窗口都相当于一台新设备，需要再批准一次。"
+      zh-cn: "访问方式与令牌保管说明"
+      en: "How to access the console and how to keep the token safe"
+    Value: "在浏览器打开「登录链接」即可进入控制台，无需其他操作；链接长期有效，更换浏览器、更换电脑或使用无痕窗口同样可用。打开时若短暂出现「批准此浏览器」页面，不用理它，几秒后会自动进入主界面。链接里含有访问令牌，等同于登录密码，请勿外发或截图分享。执行运维管理中的「重置服务」不会更换访问令牌，重置后这条链接仍然可用；若实例换过公网 IP，请用运维管理中的「获取控制台登录链接」重新获取。"
 Metadata:
   ALIYUN::ROS::Interface:
     Hidden:

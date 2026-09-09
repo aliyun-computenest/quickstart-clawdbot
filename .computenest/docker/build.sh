@@ -47,6 +47,15 @@ chmod +x "$APP_DIR/run-cmd.sh"
 mkdir -p /opt/.swas
 ln -sfn "$APP_DIR/run-cmd.sh" /opt/.swas/run-cmd.sh
 
+# 设备配对自动批准守护：装进镜像并设为开机自启，实例一起来就在跑，客户凭一条固定的
+# 登录链接即可直接进入控制台，不必登录 ECS 敲 devices approve。这里只 enable 不 start，
+# 让开机自启的软链烘进镜像，构建期不需要它运行。
+chmod +x "$APP_DIR/openclaw-autopair.sh"
+bash -n "$APP_DIR/openclaw-autopair.sh"
+ln -sfn "$APP_DIR/openclaw-autopair.service" /etc/systemd/system/openclaw-autopair.service
+systemctl daemon-reload
+systemctl enable openclaw-autopair
+
 # ── 3. computenest-cli（Skills 安装用，沿用原镜像的 venv 路径）────────────
 # Alibaba Cloud Linux 3 自带的 python3 版本偏低，computenest-cli 的依赖链装不上，
 # 因此用 uv 独立装一份 Python 3.12。venv 路径保持 /opt/computenest-env 不变，
